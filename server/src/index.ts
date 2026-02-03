@@ -1,7 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { initializeDatabase } from './database/schema.js';
 import dressesRouter from './routes/dresses.js';
 import customersRouter from './routes/customers.js';
@@ -10,17 +9,13 @@ import paymentsRouter from './routes/payments.js';
 import reportsRouter from './routes/reports.js';
 import uploadRouter from './routes/upload.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = Number(process.env.PORT) || 3001;
 const isProduction = process.env.NODE_ENV === 'production';
 
 console.log('Starting server...');
 console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('PORT:', PORT);
-console.log('isProduction:', isProduction);
 
 // Middleware
 app.use(cors());
@@ -60,7 +55,7 @@ async function start() {
     // Continue anyway - tables might already exist
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
 }
