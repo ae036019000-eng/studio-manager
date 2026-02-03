@@ -76,6 +76,53 @@ export const reportsApi = {
   },
 };
 
+// Appointments API
+export const appointmentsApi = {
+  getAll: () => fetchApi<any[]>('/appointments'),
+  getUpcoming: () => fetchApi<any[]>('/appointments/upcoming'),
+  getToday: () => fetchApi<any[]>('/appointments/today'),
+  getReminders: () => fetchApi<any[]>('/appointments/reminders'),
+  getById: (id: number) => fetchApi<any>(`/appointments/${id}`),
+  create: (data: any) => fetchApi<any>('/appointments', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: any) => fetchApi<any>(`/appointments/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  markReminderSent: (id: number) => fetchApi<void>(`/appointments/${id}/reminder-sent`, { method: 'POST' }),
+  delete: (id: number) => fetchApi<void>(`/appointments/${id}`, { method: 'DELETE' }),
+};
+
+// WhatsApp Helper
+export const whatsappHelper = {
+  // Generate WhatsApp link with message
+  getLink: (phone: string, message: string): string => {
+    // Clean phone number - remove spaces, dashes, etc.
+    let cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
+    // If starts with 0, replace with Israel code
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = '972' + cleanPhone.substring(1);
+    }
+    // If doesn't start with +, add it
+    if (!cleanPhone.startsWith('+')) {
+      cleanPhone = '+' + cleanPhone;
+    }
+    const encodedMessage = encodeURIComponent(message);
+    return `https://wa.me/${cleanPhone.replace('+', '')}?text=${encodedMessage}`;
+  },
+
+  // Pre-made message templates
+  messages: {
+    returnReminder: (customerName: string, dressName: string, date: string) =>
+      `שלום ${customerName},\nתזכורת: מחר (${date}) מתוכננת החזרת השמלה "${dressName}".\nנשמח לראותך!\n\nרחל - השכרת שמלות`,
+
+    fittingReminder: (customerName: string, date: string, time?: string) =>
+      `שלום ${customerName},\nתזכורת: מחר (${date})${time ? ` בשעה ${time}` : ''} יש לך מדידה בסטודיו.\nמחכים לך!\n\nרחל - השכרת שמלות`,
+
+    pickupReminder: (customerName: string, dressName: string, date: string) =>
+      `שלום ${customerName},\nתזכורת: מחר (${date}) מתוכנן איסוף השמלה "${dressName}".\nנשמח לראותך!\n\nרחל - השכרת שמלות`,
+
+    thankYou: (customerName: string) =>
+      `שלום ${customerName},\nתודה שבחרת ברחל!\nנשמח לראותך שוב.\n\nרחל - השכרת שמלות`,
+  }
+};
+
 // Upload API
 export const uploadApi = {
   uploadImage: async (file: File): Promise<{ path: string; filename: string }> => {

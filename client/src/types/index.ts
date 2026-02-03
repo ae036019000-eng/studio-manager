@@ -54,11 +54,29 @@ export interface Payment {
   dress_name?: string;
 }
 
+export interface Appointment {
+  id: number;
+  customer_id: number | null;
+  dress_id: number | null;
+  type: 'fitting' | 'pickup' | 'return' | 'other';
+  date: string;
+  time: string | null;
+  notes: string | null;
+  status: 'scheduled' | 'completed' | 'cancelled';
+  reminder_sent: number;
+  created_at: string;
+  // Joined fields
+  customer_name?: string;
+  customer_phone?: string;
+  dress_name?: string;
+}
+
 export interface DashboardStats {
   totalDresses: number;
   availableDresses: number;
   totalCustomers: number;
   activeRentals: number;
+  todayAppointments: number;
   monthlyRevenue: number;
 }
 

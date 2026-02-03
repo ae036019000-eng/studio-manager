@@ -11,6 +11,12 @@ router.get('/dashboard', async (req, res) => {
     const totalCustomers = await get('SELECT COUNT(*) as count FROM customers');
     const activeRentals = await get("SELECT COUNT(*) as count FROM rentals WHERE status = 'active'");
 
+    const today = new Date().toISOString().split('T')[0];
+    const todayAppointments = await get(`
+      SELECT COUNT(*) as count FROM appointments
+      WHERE date = ? AND status = 'scheduled'
+    `, [today]);
+
     const monthStart = new Date();
     monthStart.setDate(1);
     const monthStartStr = monthStart.toISOString().split('T')[0];
@@ -26,6 +32,7 @@ router.get('/dashboard', async (req, res) => {
       availableDresses: availableDresses?.count || 0,
       totalCustomers: totalCustomers?.count || 0,
       activeRentals: activeRentals?.count || 0,
+      todayAppointments: todayAppointments?.count || 0,
       monthlyRevenue: monthlyRevenue?.total || 0
     });
   } catch (error) {
@@ -98,6 +105,7 @@ router.get('/returning-customers', async (req, res) => {
 // Calendar events (for FullCalendar)
 router.get('/calendar', async (req, res) => {
   try {
+    // Get rentals
     const rentals = await all(`
       SELECT r.id, r.start_date, r.end_date, r.status,
              d.name as dress_name, d.color as dress_color,
@@ -108,21 +116,63 @@ router.get('/calendar', async (req, res) => {
       WHERE r.status != 'cancelled'
     `);
 
-    const events = rentals.map((r: any) => ({
-      id: r.id,
+    // Get appointments
+    const appointments = await all(`
+      SELECT a.id, a.date, a.time, a.type, a.status,
+             c.name as customer_name,
+             d.name as dress_name
+      FROM appointments a
+      LEFT JOIN customers c ON a.customer_id = c.id
+      LEFT JOIN dresses d ON a.dress_id = d.id
+      WHERE a.status = 'scheduled'
+    `);
+
+    const typeLabels: Record<string, string> = {
+      fitting: 'מדידה',
+      pickup: 'איסוף',
+      return: 'החזרה',
+      other: 'אחר'
+    };
+
+    const typeColors: Record<string, string> = {
+      fitting: '#8b5cf6',  // purple
+      pickup: '#f59e0b',   // amber
+      return: '#ef4444',   // red
+      other: '#6b7280'     // gray
+    };
+
+    const rentalEvents = rentals.map((r: any) => ({
+      id: `rental-${r.id}`,
       title: `${r.dress_name} - ${r.customer_name}`,
       start: r.start_date,
       end: r.end_date,
-      backgroundColor: r.status === 'active' ? '#3b82f6' : '#10b981',
+      backgroundColor: r.status === 'active' ? '#D4AF37' : '#10b981',
       extendedProps: {
+        type: 'rental',
         dressName: r.dress_name,
         customerName: r.customer_name,
         status: r.status
       }
     }));
 
-    res.json(events);
+    const appointmentEvents = appointments.map((a: any) => ({
+      id: `appointment-${a.id}`,
+      title: `${typeLabels[a.type] || a.type}${a.customer_name ? ` - ${a.customer_name}` : ''}`,
+      start: a.date,
+      allDay: !a.time,
+      backgroundColor: typeColors[a.type] || typeColors.other,
+      extendedProps: {
+        type: 'appointment',
+        appointmentType: a.type,
+        dressName: a.dress_name,
+        customerName: a.customer_name,
+        time: a.time
+      }
+    }));
+
+    res.json([...rentalEvents, ...appointmentEvents]);
   } catch (error) {
+    console.error('Calendar error:', error);
     res.status(500).json({ error: 'Failed to fetch calendar events' });
   }
 });

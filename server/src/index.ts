@@ -8,6 +8,7 @@ import rentalsRouter from './routes/rentals.js';
 import paymentsRouter from './routes/payments.js';
 import reportsRouter from './routes/reports.js';
 import uploadRouter from './routes/upload.js';
+import appointmentsRouter from './routes/appointments.js';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
@@ -34,6 +35,7 @@ app.use('/api/rentals', rentalsRouter);
 app.use('/api/payments', paymentsRouter);
 app.use('/api/reports', reportsRouter);
 app.use('/api/upload', uploadRouter);
+app.use('/api/appointments', appointmentsRouter);
 
 // Serve client in production
 if (isProduction) {

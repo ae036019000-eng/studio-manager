@@ -85,6 +85,18 @@ async function runMigrations(): Promise<void> {
       notes TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )`,
+    `CREATE TABLE IF NOT EXISTS appointments (
+      id INTEGER PRIMARY KEY,
+      customer_id INTEGER,
+      dress_id INTEGER,
+      type TEXT NOT NULL,
+      date TEXT NOT NULL,
+      time TEXT,
+      notes TEXT,
+      status TEXT DEFAULT 'scheduled',
+      reminder_sent INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )`,
   ];
 
   for (const sql of tables) {

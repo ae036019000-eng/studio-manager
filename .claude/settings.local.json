@@ -9,7 +9,11 @@
       "Bash(timeout 10s npm run dev:*)",
       "Bash(__NEW_LINE_deccdee45a8b876e__ curl -s -X POST http://localhost:3001/api/customers -H \"Content-Type: application/json\" -d '{\"\"name\"\":\"\"ישראלה כהן\"\",\"\"phone\"\":\"\"050-1234567\"\",\"\"email\"\":\"\"israel@example.com\"\"}')",
       "Bash(__NEW_LINE_deccdee45a8b876e__ curl -s -X POST http://localhost:3001/api/customers -H \"Content-Type: application/json\" -d '{\"\"name\"\":\"\"מיכל לוי\"\",\"\"phone\"\":\"\"052-9876543\"\",\"\"email\"\":\"\"michal@example.com\"\"}')",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nMake app fully responsive for mobile \\(iPhone\\)\n\n- Add mobile bottom navigation with 5 main menu items\n- Add hamburger menu for mobile sidebar\n- Add safe-area support for iPhone notch/home indicator\n- Convert tables to card layouts on mobile for better UX\n- Make modals open from bottom on mobile \\(bottom-sheet style\\)\n- Responsive grid layouts \\(2 cols mobile, 4 cols desktop\\)\n- Smaller text and padding on mobile screens\n- Mobile-optimized calendar with smaller buttons\n- All pages now have bottom padding for mobile nav\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nUpdate branding to Rachel studio\n\n- Add Rachel logo to sidebar and mobile header\n- Update page title to Rachel\n- Update footer copyright\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }
