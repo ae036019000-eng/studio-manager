@@ -22,9 +22,7 @@ export default function Layout({ children }: LayoutProps) {
     <div className="flex min-h-screen bg-cream-100">
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-champagne-200 z-50 px-4 py-3 flex items-center justify-between">
-        <h1 className="font-serif text-xl font-semibold text-gold-gradient">
-          Studio Elegance
-        </h1>
+        <img src="/logo.jpg" alt="Rachel" className="h-8 object-contain" />
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           className="p-2 rounded-lg hover:bg-champagne-100 transition-colors"
@@ -56,9 +54,7 @@ export default function Layout({ children }: LayoutProps) {
       `}>
         {/* Logo/Brand */}
         <div className="p-6 lg:p-8 border-b border-champagne-100 mt-14 lg:mt-0">
-          <h1 className="font-serif text-2xl lg:text-3xl font-semibold text-gold-gradient">
-            Studio Elegance
-          </h1>
+          <img src="/logo.jpg" alt="Rachel" className="h-12 lg:h-16 object-contain" />
           <p className="text-champagne-700 text-sm mt-2 tracking-widest uppercase">
             השכרת שמלות יוקרה
           </p>
@@ -102,7 +98,7 @@ export default function Layout({ children }: LayoutProps) {
         <div className="absolute bottom-0 left-0 right-0 p-6 hidden lg:block">
           <div className="gold-accent"></div>
           <p className="text-center text-champagne-600 text-xs mt-4 tracking-wider">
-            © 2024 Studio Elegance
+            © 2024 Rachel
           </p>
         </div>
       </aside>
