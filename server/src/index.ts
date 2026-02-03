@@ -47,19 +47,18 @@ if (isProduction) {
   });
 }
 
-// Initialize database and start server
-async function start() {
-  try {
-    await initializeDatabase();
-    console.log('Database initialized');
-  } catch (error) {
-    console.error('Database initialization error:', error);
-    // Continue anyway - tables might already exist
-  }
+// Start server FIRST, then initialize database
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
 
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
-}
+  // Initialize database after server is running
+  initializeDatabase()
+    .then(() => console.log('Database initialized'))
+    .catch((error) => console.error('Database init error (non-fatal):', error));
+});
 
-start();
+// Handle shutdown gracefully
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down...');
+  server.close(() => process.exit(0));
+});

@@ -20,7 +20,6 @@ const appointmentTypes = [
 export default function Calendar() {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState('');
   const [formData, setFormData] = useState({
     customer_id: '',
     dress_id: '',
@@ -81,7 +80,6 @@ export default function Calendar() {
   });
 
   const openModal = (date?: string) => {
-    setSelectedDate(date || new Date().toISOString().split('T')[0]);
     setFormData({
       customer_id: '',
       dress_id: '',

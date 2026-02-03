@@ -13,7 +13,9 @@
       "Bash(git add:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nMake app fully responsive for mobile \\(iPhone\\)\n\n- Add mobile bottom navigation with 5 main menu items\n- Add hamburger menu for mobile sidebar\n- Add safe-area support for iPhone notch/home indicator\n- Convert tables to card layouts on mobile for better UX\n- Make modals open from bottom on mobile \\(bottom-sheet style\\)\n- Responsive grid layouts \\(2 cols mobile, 4 cols desktop\\)\n- Smaller text and padding on mobile screens\n- Mobile-optimized calendar with smaller buttons\n- All pages now have bottom padding for mobile nav\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git push)",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nUpdate branding to Rachel studio\n\n- Add Rachel logo to sidebar and mobile header\n- Update page title to Rachel\n- Update footer copyright\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nUpdate branding to Rachel studio\n\n- Add Rachel logo to sidebar and mobile header\n- Update page title to Rachel\n- Update footer copyright\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)",
+      "Bash(npm run build:*)"
     ]
   }
 }
