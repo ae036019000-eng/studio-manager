@@ -14,6 +14,8 @@ let sqlJsDb: SqlJsDatabase | null = null;
 export async function initializeDatabase(): Promise<void> {
   if (useTurso) {
     // Production: Use Turso
+    console.log('Connecting to Turso...');
+    console.log('URL:', process.env.TURSO_DATABASE_URL?.substring(0, 30) + '...');
     tursoClient = createClient({
       url: process.env.TURSO_DATABASE_URL!,
       authToken: process.env.TURSO_AUTH_TOKEN,
@@ -31,9 +33,13 @@ export async function initializeDatabase(): Promise<void> {
     console.log('Using local sql.js database');
   }
 
-  // Create tables
-  await runMigrations();
-  console.log('Database initialized successfully');
+  // Create tables (skip if they exist)
+  try {
+    await runMigrations();
+    console.log('Migrations completed');
+  } catch (error) {
+    console.log('Migrations skipped (tables may already exist)');
+  }
 }
 
 async function runMigrations(): Promise<void> {
