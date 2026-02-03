@@ -31,7 +31,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen items-center justify-center p-4">
+      <div className="flex min-h-screen items-end lg:items-center justify-center p-0 lg:p-4">
         {/* Backdrop */}
         <div
           className="fixed inset-0 bg-champagne-900/30 backdrop-blur-sm transition-opacity animate-fade-in"
@@ -41,15 +41,16 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
         {/* Modal */}
         <div
           className={`
-            relative bg-white rounded-2xl shadow-soft-lg w-full ${sizeClasses[size]}
+            relative bg-white rounded-t-2xl lg:rounded-2xl shadow-soft-lg w-full ${sizeClasses[size]}
             transform transition-all animate-scale-in
             border border-champagne-100
+            max-h-[90vh] lg:max-h-[85vh] overflow-y-auto
           `}
         >
           {/* Header */}
-          <div className="px-8 py-6 border-b border-champagne-100">
+          <div className="px-4 lg:px-8 py-4 lg:py-6 border-b border-champagne-100 sticky top-0 bg-white z-10">
             <div className="flex items-center justify-between">
-              <h3 className="font-serif text-2xl font-semibold text-champagne-800">{title}</h3>
+              <h3 className="font-serif text-xl lg:text-2xl font-semibold text-champagne-800">{title}</h3>
               <button
                 onClick={onClose}
                 className="w-10 h-10 rounded-xl flex items-center justify-center
@@ -61,11 +62,11 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
                 </svg>
               </button>
             </div>
-            <div className="gold-accent mt-4 w-12"></div>
+            <div className="gold-accent mt-3 lg:mt-4 w-12"></div>
           </div>
 
           {/* Content */}
-          <div className="px-8 py-6">{children}</div>
+          <div className="px-4 lg:px-8 py-4 lg:py-6">{children}</div>
         </div>
       </div>
     </div>

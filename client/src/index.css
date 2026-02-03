@@ -9,6 +9,16 @@
   html {
     direction: rtl;
     scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Safe area for iPhone notch and home indicator */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top, 0);
   }
 
   body {
@@ -175,4 +185,31 @@
 
 .fc-theme-standard td, .fc-theme-standard th {
   @apply border-champagne-200;
+}
+
+/* Mobile calendar adjustments */
+@media (max-width: 1024px) {
+  .fc .fc-toolbar {
+    @apply flex-col gap-2;
+  }
+
+  .fc .fc-toolbar-title {
+    @apply text-lg;
+  }
+
+  .fc .fc-button {
+    @apply px-2 py-1 text-xs;
+  }
+
+  .fc .fc-daygrid-day-number {
+    @apply text-xs;
+  }
+
+  .fc .fc-event {
+    @apply text-xs px-1;
+  }
+
+  .fc .fc-col-header-cell-cushion {
+    @apply text-xs;
+  }
 }

@@ -54,18 +54,18 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="animate-slide-up">
+    <div className="animate-slide-up pb-20 lg:pb-0">
       {/* Header */}
-      <div className="mb-10">
-        <h1 className="font-serif text-4xl font-semibold text-champagne-800 mb-2">
+      <div className="mb-6 lg:mb-10">
+        <h1 className="font-serif text-2xl lg:text-4xl font-semibold text-champagne-800 mb-1 lg:mb-2">
           דשבורד
         </h1>
-        <p className="text-champagne-700">סקירה כללית של הסטודיו</p>
-        <div className="gold-accent mt-4 w-20"></div>
+        <p className="text-champagne-700 text-sm lg:text-base">סקירה כללית של הסטודיו</p>
+        <div className="gold-accent mt-3 lg:mt-4 w-16 lg:w-20"></div>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6 mb-6 lg:mb-10">
         <StatCard
           title="סה״כ שמלות"
           value={stats?.totalDresses || 0}

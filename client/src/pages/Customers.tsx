@@ -195,23 +195,23 @@ export default function Customers() {
   }
 
   return (
-    <div className="animate-slide-up">
+    <div className="animate-slide-up pb-20 lg:pb-0">
       {/* Header */}
-      <div className="flex justify-between items-start mb-10">
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6 lg:mb-10">
         <div>
-          <h1 className="font-serif text-4xl font-semibold text-champagne-800 mb-2">
+          <h1 className="font-serif text-2xl lg:text-4xl font-semibold text-champagne-800 mb-1 lg:mb-2">
             לקוחות
           </h1>
-          <p className="text-champagne-700">ניהול רשימת הלקוחות</p>
-          <div className="gold-accent mt-4 w-16"></div>
+          <p className="text-champagne-700 text-sm lg:text-base">ניהול רשימת הלקוחות</p>
+          <div className="gold-accent mt-3 lg:mt-4 w-12 lg:w-16"></div>
         </div>
-        <Button onClick={() => openModal()}>
+        <Button onClick={() => openModal()} className="w-full sm:w-auto">
           + הוסף לקוח
         </Button>
       </div>
 
       {/* Search */}
-      <div className="mb-8 max-w-md">
+      <div className="mb-6 lg:mb-8">
         <SearchFilter
           value={search}
           onChange={setSearch}
@@ -219,8 +219,56 @@ export default function Customers() {
         />
       </div>
 
-      {/* Table */}
-      <Card className="overflow-hidden" hover={false}>
+      {/* Mobile Cards */}
+      <div className="lg:hidden space-y-3">
+        {filteredCustomers.length === 0 ? (
+          <Card className="p-8 text-center">
+            <div className="text-champagne-300 text-4xl mb-4">✦</div>
+            <p className="text-champagne-700">אין לקוחות להצגה</p>
+          </Card>
+        ) : (
+          filteredCustomers.map((customer: Customer) => (
+            <Card key={customer.id} className="p-4">
+              <div className="flex justify-between items-start mb-3">
+                <div>
+                  <h3 className="font-serif text-lg font-semibold text-champagne-800">{customer.name}</h3>
+                  {customer.phone && (
+                    <a href={`tel:${customer.phone}`} className="text-sm text-gold-600">{customer.phone}</a>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="secondary" onClick={() => openModal(customer)}>
+                    עריכה
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      if (confirm('האם למחוק את הלקוח?')) {
+                        deleteMutation.mutate(customer.id);
+                      }
+                    }}
+                  >
+                    ✕
+                  </Button>
+                </div>
+              </div>
+              {customer.email && (
+                <p className="text-sm text-champagne-600 truncate">{customer.email}</p>
+              )}
+              <div className="flex justify-between items-center mt-3 pt-3 border-t border-champagne-100">
+                <span className="text-xs text-champagne-500">הצטרף/ה: {formatDate(customer.created_at)}</span>
+                <Button size="sm" variant="ghost" onClick={() => openHistoryModal(customer)}>
+                  היסטוריה
+                </Button>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
+
+      {/* Desktop Table */}
+      <Card className="overflow-hidden hidden lg:block" hover={false}>
         <Table
           columns={columns}
           data={filteredCustomers}

@@ -41,13 +41,13 @@ export function StatCard({ title, value, icon, color = 'gold' }: StatCardProps) 
   };
 
   return (
-    <Card className={`p-6 bg-gradient-to-br ${colorClasses[color]} border`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-champagne-600 font-medium tracking-wide">{title}</p>
-          <p className="text-3xl font-serif font-bold mt-2 text-champagne-800">{value}</p>
+    <Card className={`p-3 lg:p-6 bg-gradient-to-br ${colorClasses[color]} border`}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs lg:text-sm text-champagne-600 font-medium tracking-wide truncate">{title}</p>
+          <p className="text-lg lg:text-3xl font-serif font-bold mt-1 lg:mt-2 text-champagne-800 truncate">{value}</p>
         </div>
-        <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl ${iconBgClasses[color]} shadow-inner-soft`}>
+        <div className={`w-10 h-10 lg:w-14 lg:h-14 rounded-lg lg:rounded-xl flex-shrink-0 flex items-center justify-center text-lg lg:text-2xl ${iconBgClasses[color]} shadow-inner-soft`}>
           {icon}
         </div>
       </div>

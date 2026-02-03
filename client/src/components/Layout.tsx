@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
 const menuItems = [
@@ -15,14 +16,47 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
     <div className="flex min-h-screen bg-cream-100">
-      {/* Sidebar */}
-      <aside className="w-72 bg-white border-l border-champagne-200 flex-shrink-0 shadow-soft">
+      {/* Mobile Header */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-champagne-200 z-50 px-4 py-3 flex items-center justify-between">
+        <h1 className="font-serif text-xl font-semibold text-gold-gradient">
+          Studio Elegance
+        </h1>
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="p-2 rounded-lg hover:bg-champagne-100 transition-colors"
+        >
+          <svg className="w-6 h-6 text-champagne-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            {isMobileMenuOpen ? (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            )}
+          </svg>
+        </button>
+      </div>
+
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/30 z-40"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar - Desktop & Mobile */}
+      <aside className={`
+        fixed lg:relative top-0 right-0 h-full w-72 bg-white border-l border-champagne-200 shadow-soft z-50
+        transform transition-transform duration-300 ease-out
+        ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
+        lg:flex-shrink-0
+      `}>
         {/* Logo/Brand */}
-        <div className="p-8 border-b border-champagne-100">
-          <h1 className="font-serif text-3xl font-semibold text-gold-gradient">
+        <div className="p-6 lg:p-8 border-b border-champagne-100 mt-14 lg:mt-0">
+          <h1 className="font-serif text-2xl lg:text-3xl font-semibold text-gold-gradient">
             Studio Elegance
           </h1>
           <p className="text-champagne-700 text-sm mt-2 tracking-widest uppercase">
@@ -32,14 +66,15 @@ export default function Layout({ children }: LayoutProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="mt-6 px-4">
+        <nav className="mt-4 lg:mt-6 px-3 lg:px-4">
           {menuItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-4 px-5 py-4 mb-2 rounded-xl transition-all duration-300 group ${
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`flex items-center gap-3 lg:gap-4 px-4 lg:px-5 py-3 lg:py-4 mb-2 rounded-xl transition-all duration-300 group ${
                   isActive
                     ? 'bg-gradient-to-l from-gold-50 to-gold-100 text-gold-700 shadow-sm'
                     : 'text-champagne-600 hover:bg-champagne-50 hover:text-champagne-800'
@@ -64,7 +99,7 @@ export default function Layout({ children }: LayoutProps) {
         </nav>
 
         {/* Footer decoration */}
-        <div className="absolute bottom-0 left-0 right-0 p-6">
+        <div className="absolute bottom-0 left-0 right-0 p-6 hidden lg:block">
           <div className="gold-accent"></div>
           <p className="text-center text-champagne-600 text-xs mt-4 tracking-wider">
             © 2024 Studio Elegance
@@ -73,11 +108,32 @@ export default function Layout({ children }: LayoutProps) {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto">
-        <div className="p-10 max-w-7xl mx-auto animate-fade-in">
+      <main className="flex-1 overflow-auto pt-14 lg:pt-0">
+        <div className="p-4 lg:p-10 max-w-7xl mx-auto animate-fade-in">
           {children}
         </div>
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-champagne-200 z-50 safe-area-bottom">
+        <div className="flex justify-around items-center py-2">
+          {menuItems.slice(0, 5).map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${
+                  isActive ? 'text-gold-600' : 'text-champagne-500'
+                }`}
+              >
+                <span className="text-xl">{item.icon}</span>
+                <span className="text-xs mt-1">{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }

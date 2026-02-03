@@ -173,23 +173,23 @@ export default function Dresses() {
   }
 
   return (
-    <div className="animate-slide-up">
+    <div className="animate-slide-up pb-20 lg:pb-0">
       {/* Header */}
-      <div className="flex justify-between items-start mb-10">
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6 lg:mb-10">
         <div>
-          <h1 className="font-serif text-4xl font-semibold text-champagne-800 mb-2">
+          <h1 className="font-serif text-2xl lg:text-4xl font-semibold text-champagne-800 mb-1 lg:mb-2">
             שמלות
           </h1>
-          <p className="text-champagne-700">ניהול קולקציית השמלות</p>
-          <div className="gold-accent mt-4 w-16"></div>
+          <p className="text-champagne-700 text-sm lg:text-base">ניהול קולקציית השמלות</p>
+          <div className="gold-accent mt-3 lg:mt-4 w-12 lg:w-16"></div>
         </div>
-        <Button onClick={() => openModal()}>
+        <Button onClick={() => openModal()} className="w-full sm:w-auto">
           + הוסף שמלה
         </Button>
       </div>
 
       {/* Search */}
-      <div className="mb-8 max-w-md">
+      <div className="mb-6 lg:mb-8">
         <SearchFilter
           value={search}
           onChange={setSearch}
@@ -199,12 +199,12 @@ export default function Dresses() {
 
       {/* Grid */}
       {filteredDresses.length === 0 ? (
-        <Card className="p-16 text-center">
-          <div className="text-champagne-300 text-5xl mb-4">❖</div>
+        <Card className="p-8 lg:p-16 text-center">
+          <div className="text-champagne-300 text-4xl lg:text-5xl mb-4">❖</div>
           <p className="text-champagne-700">אין שמלות להצגה</p>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-8">
           {filteredDresses.map((dress: Dress) => (
             <Card key={dress.id} className="overflow-hidden group">
               <div className="aspect-[3/4] bg-gradient-to-br from-champagne-50 to-champagne-100 relative overflow-hidden">
@@ -223,25 +223,25 @@ export default function Dresses() {
                   {getStatusBadge(dress.status)}
                 </div>
               </div>
-              <div className="p-6">
-                <h3 className="font-serif text-xl font-semibold text-champagne-800 mb-2">
+              <div className="p-3 lg:p-6">
+                <h3 className="font-serif text-base lg:text-xl font-semibold text-champagne-800 mb-1 lg:mb-2 truncate">
                   {dress.name}
                 </h3>
-                <div className="text-sm text-champagne-700 space-x-reverse space-x-2 rtl:space-x-reverse mb-3">
+                <div className="text-xs lg:text-sm text-champagne-700 space-x-reverse space-x-1 lg:space-x-2 rtl:space-x-reverse mb-2 lg:mb-3">
                   {dress.size && <span>מידה {dress.size}</span>}
                   {dress.size && dress.color && <span>•</span>}
                   {dress.color && <span>{dress.color}</span>}
                 </div>
-                <p className="text-gold-600 font-semibold text-lg mb-4">
+                <p className="text-gold-600 font-semibold text-base lg:text-lg mb-3 lg:mb-4">
                   {formatCurrency(dress.price_per_day)}
-                  <span className="text-champagne-600 text-sm font-normal"> / יום</span>
+                  <span className="text-champagne-600 text-xs lg:text-sm font-normal"> / יום</span>
                 </p>
                 <div className="flex gap-2">
                   <Button
                     size="sm"
                     variant="secondary"
                     onClick={() => openModal(dress)}
-                    className="flex-1"
+                    className="flex-1 text-xs lg:text-sm"
                   >
                     עריכה
                   </Button>

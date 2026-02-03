@@ -37,7 +37,7 @@ export default function Table<T>({
             {columns.map((col) => (
               <th
                 key={String(col.key)}
-                className={`px-6 py-4 text-right text-sm font-semibold text-champagne-600 tracking-wide uppercase ${col.className || ''}`}
+                className={`px-3 lg:px-6 py-3 lg:py-4 text-right text-xs lg:text-sm font-semibold text-champagne-600 tracking-wide uppercase ${col.className || ''}`}
               >
                 {col.header}
               </th>
@@ -58,7 +58,7 @@ export default function Table<T>({
               {columns.map((col) => (
                 <td
                   key={String(col.key)}
-                  className={`px-6 py-5 text-sm text-champagne-800 ${col.className || ''}`}
+                  className={`px-3 lg:px-6 py-3 lg:py-5 text-xs lg:text-sm text-champagne-800 ${col.className || ''}`}
                 >
                   {col.render
                     ? col.render(item)

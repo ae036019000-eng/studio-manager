@@ -27,18 +27,18 @@ export default function Calendar() {
   }));
 
   return (
-    <div className="animate-slide-up">
+    <div className="animate-slide-up pb-20 lg:pb-0">
       {/* Header */}
-      <div className="mb-10">
-        <h1 className="font-serif text-4xl font-semibold text-champagne-800 mb-2">
+      <div className="mb-6 lg:mb-10">
+        <h1 className="font-serif text-2xl lg:text-4xl font-semibold text-champagne-800 mb-1 lg:mb-2">
           לוח שנה
         </h1>
-        <p className="text-champagne-700">תצוגת השכרות בלוח שנה</p>
-        <div className="gold-accent mt-4 w-16"></div>
+        <p className="text-champagne-700 text-sm lg:text-base">תצוגת השכרות בלוח שנה</p>
+        <div className="gold-accent mt-3 lg:mt-4 w-12 lg:w-16"></div>
       </div>
 
       {/* Calendar */}
-      <Card className="p-8" hover={false}>
+      <Card className="p-3 lg:p-8" hover={false}>
         <FullCalendar
           plugins={[dayGridPlugin, interactionPlugin]}
           initialView="dayGridMonth"
@@ -60,20 +60,20 @@ export default function Calendar() {
             alert(`שמלה: ${props.dressName}\nלקוח/ה: ${props.customerName}\nסטטוס: ${props.status === 'active' ? 'פעיל' : 'הושלם'}`);
           }}
           height="auto"
-          dayMaxEvents={3}
+          dayMaxEvents={2}
           eventDisplay="block"
         />
       </Card>
 
       {/* Legend */}
-      <div className="mt-6 flex gap-8">
-        <div className="flex items-center gap-3">
-          <div className="w-4 h-4 rounded-full bg-gold-500"></div>
-          <span className="text-champagne-600">השכרה פעילה</span>
+      <div className="mt-4 lg:mt-6 flex gap-4 lg:gap-8">
+        <div className="flex items-center gap-2 lg:gap-3">
+          <div className="w-3 h-3 lg:w-4 lg:h-4 rounded-full bg-gold-500"></div>
+          <span className="text-champagne-600 text-sm lg:text-base">השכרה פעילה</span>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="w-4 h-4 rounded-full bg-emerald-500"></div>
-          <span className="text-champagne-600">הושלם</span>
+        <div className="flex items-center gap-2 lg:gap-3">
+          <div className="w-3 h-3 lg:w-4 lg:h-4 rounded-full bg-emerald-500"></div>
+          <span className="text-champagne-600 text-sm lg:text-base">הושלם</span>
         </div>
       </div>
     </div>

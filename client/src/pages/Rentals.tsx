@@ -296,23 +296,23 @@ export default function Rentals() {
   }
 
   return (
-    <div className="animate-slide-up">
+    <div className="animate-slide-up pb-20 lg:pb-0">
       {/* Header */}
-      <div className="flex justify-between items-start mb-10">
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6 lg:mb-10">
         <div>
-          <h1 className="font-serif text-4xl font-semibold text-champagne-800 mb-2">
+          <h1 className="font-serif text-2xl lg:text-4xl font-semibold text-champagne-800 mb-1 lg:mb-2">
             השכרות
           </h1>
-          <p className="text-champagne-700">ניהול השכרות השמלות</p>
-          <div className="gold-accent mt-4 w-16"></div>
+          <p className="text-champagne-700 text-sm lg:text-base">ניהול השכרות השמלות</p>
+          <div className="gold-accent mt-3 lg:mt-4 w-12 lg:w-16"></div>
         </div>
-        <Button onClick={() => openModal()}>
+        <Button onClick={() => openModal()} className="w-full sm:w-auto">
           + השכרה חדשה
         </Button>
       </div>
 
       {/* Search */}
-      <div className="mb-8 max-w-md">
+      <div className="mb-6 lg:mb-8">
         <SearchFilter
           value={search}
           onChange={setSearch}
@@ -320,8 +320,61 @@ export default function Rentals() {
         />
       </div>
 
-      {/* Table */}
-      <Card className="overflow-hidden" hover={false}>
+      {/* Mobile Cards */}
+      <div className="lg:hidden space-y-3">
+        {filteredRentals.length === 0 ? (
+          <Card className="p-8 text-center">
+            <div className="text-champagne-300 text-4xl mb-4">◆</div>
+            <p className="text-champagne-700">אין השכרות להצגה</p>
+          </Card>
+        ) : (
+          filteredRentals.map((rental: Rental) => (
+            <Card key={rental.id} className="p-4">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <h3 className="font-serif text-base font-semibold text-champagne-800">{rental.dress_name}</h3>
+                  <p className="text-sm text-champagne-600">{rental.customer_name}</p>
+                </div>
+                {getStatusBadge(rental.status)}
+              </div>
+              <div className="flex justify-between items-center text-sm text-champagne-600 mb-3">
+                <span>{formatDate(rental.start_date)} - {formatDate(rental.end_date)}</span>
+                <span className="font-semibold text-gold-600">{formatCurrency(rental.total_price)}</span>
+              </div>
+              <div className="flex gap-2 pt-3 border-t border-champagne-100">
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={() => {
+                    setSelectedRental(rental);
+                    setIsPaymentModalOpen(true);
+                  }}
+                  className="flex-1"
+                >
+                  תשלום
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => openModal(rental)}>
+                  עריכה
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    if (confirm('האם למחוק את ההשכרה?')) {
+                      deleteMutation.mutate(rental.id);
+                    }
+                  }}
+                >
+                  ✕
+                </Button>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
+
+      {/* Desktop Table */}
+      <Card className="overflow-hidden hidden lg:block" hover={false}>
         <Table
           columns={columns}
           data={filteredRentals}
@@ -338,7 +391,7 @@ export default function Rentals() {
         size="lg"
       >
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
             <Select
               label="שמלה"
               value={formData.dress_id}
@@ -358,7 +411,7 @@ export default function Rentals() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-2 gap-4 lg:gap-6">
             <Input
               label="תאריך התחלה"
               type="date"
@@ -378,7 +431,7 @@ export default function Rentals() {
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
             <Input
               label="מחיר כולל (₪)"
               type="number"
