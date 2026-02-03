@@ -1,0 +1,16 @@
+{
+  "name": "studio-manager",
+  "version": "1.0.0",
+  "description": "Dress rental studio management system",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "build": "cd client && npm run build && cd ../server && npm run build",
+    "start:prod": "NODE_ENV=production node server/dist/index.js"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(npm create:*)",
+      "Bash(npx tsc:*)",
+      "Bash(curl:*)",
+      "Bash(pkill:*)",
+      "Bash(timeout 10s npm run dev:*)",
+      "Bash(__NEW_LINE_deccdee45a8b876e__ curl -s -X POST http://localhost:3001/api/customers -H \"Content-Type: application/json\" -d '{\"\"name\"\":\"\"ישראלה כהן\"\",\"\"phone\"\":\"\"050-1234567\"\",\"\"email\"\":\"\"israel@example.com\"\"}')",
+      "Bash(__NEW_LINE_deccdee45a8b876e__ curl -s -X POST http://localhost:3001/api/customers -H \"Content-Type: application/json\" -d '{\"\"name\"\":\"\"מיכל לוי\"\",\"\"phone\"\":\"\"052-9876543\"\",\"\"email\"\":\"\"michal@example.com\"\"}')",
+      "Bash(npm install:*)"
+    ]
+  }
+}
