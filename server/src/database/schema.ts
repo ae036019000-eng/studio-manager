@@ -39,7 +39,7 @@ export async function initializeDatabase(): Promise<void> {
 async function runMigrations(): Promise<void> {
   const tables = [
     `CREATE TABLE IF NOT EXISTS dresses (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id INTEGER PRIMARY KEY,
       name TEXT NOT NULL,
       description TEXT,
       size TEXT,
@@ -47,45 +47,46 @@ async function runMigrations(): Promise<void> {
       price_per_day REAL NOT NULL,
       image_path TEXT,
       status TEXT DEFAULT 'available',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )`,
     `CREATE TABLE IF NOT EXISTS customers (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id INTEGER PRIMARY KEY,
       name TEXT NOT NULL,
       phone TEXT,
       email TEXT,
       address TEXT,
       notes TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )`,
     `CREATE TABLE IF NOT EXISTS rentals (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id INTEGER PRIMARY KEY,
       dress_id INTEGER NOT NULL,
       customer_id INTEGER NOT NULL,
-      start_date DATE NOT NULL,
-      end_date DATE NOT NULL,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
       total_price REAL NOT NULL,
       deposit REAL DEFAULT 0,
       status TEXT DEFAULT 'active',
       notes TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (dress_id) REFERENCES dresses(id),
-      FOREIGN KEY (customer_id) REFERENCES customers(id)
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )`,
     `CREATE TABLE IF NOT EXISTS payments (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id INTEGER PRIMARY KEY,
       rental_id INTEGER NOT NULL,
       amount REAL NOT NULL,
-      payment_date DATE NOT NULL,
+      payment_date TEXT NOT NULL,
       method TEXT,
       notes TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (rental_id) REFERENCES rentals(id)
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )`,
   ];
 
   for (const sql of tables) {
-    await run(sql);
+    try {
+      await run(sql);
+    } catch (error) {
+      console.error('Migration error:', error);
+    }
   }
 }
 
