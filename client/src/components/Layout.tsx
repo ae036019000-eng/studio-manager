@@ -22,11 +22,11 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header with menu button */}
-      <div className="fixed top-0 left-0 right-0 bg-white border-b border-gray-200 z-40 px-4 py-3 flex items-center justify-between">
-        <img src="/logo.jpg" alt="Rachel" className="h-8 object-contain" />
+      <div className="fixed top-0 left-0 right-0 bg-white border-b border-gray-200 z-40 px-4 py-4 flex items-center justify-center">
+        {/* Menu button on right */}
         <button
           onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          className="absolute right-4 p-2 rounded-lg hover:bg-gray-100 transition-colors"
         >
           <svg className="w-6 h-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             {isMenuOpen ? (
@@ -36,6 +36,8 @@ export default function Layout({ children }: LayoutProps) {
             )}
           </svg>
         </button>
+        {/* Large centered logo */}
+        <img src="/logo.jpg" alt="Rachel" className="h-14 object-contain" />
       </div>
 
       {/* Menu Overlay */}
@@ -83,7 +85,7 @@ export default function Layout({ children }: LayoutProps) {
       </aside>
 
       {/* Main content */}
-      <main className="pt-14">
+      <main className="pt-20">
         <div className="p-4 lg:p-8 max-w-6xl mx-auto">
           {children}
         </div>
