@@ -1,11 +1,38 @@
-import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
-import { reportsApi, rentalsApi, appointmentsApi, whatsappHelper } from '../services/api';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { reportsApi, rentalsApi, appointmentsApi, customersApi, dressesApi, whatsappHelper } from '../services/api';
 import Card, { StatCard } from '../components/Card';
 import Button from '../components/Button';
-import type { Rental, Appointment } from '../types';
+import Modal from '../components/Modal';
+import Input, { Select, Textarea } from '../components/Input';
+import type { Rental, Appointment, Customer, Dress } from '../types';
+
+const appointmentTypes = [
+  { value: 'fitting', label: 'מדידה' },
+  { value: 'pickup', label: 'איסוף' },
+  { value: 'return', label: 'החזרה' },
+  { value: 'other', label: 'אחר' },
+];
 
 export default function Dashboard() {
+  const queryClient = useQueryClient();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isNewCustomerMode, setIsNewCustomerMode] = useState(false);
+  const [isWalkIn, setIsWalkIn] = useState(false);
+  const [walkInName, setWalkInName] = useState('');
+  const [formData, setFormData] = useState({
+    customer_id: '',
+    dress_id: '',
+    type: 'fitting',
+    date: '',
+    time: '',
+    notes: '',
+  });
+  const [newCustomerData, setNewCustomerData] = useState({
+    name: '',
+    phone: '',
+  });
+
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['dashboard'],
     queryFn: reportsApi.getDashboard,
@@ -20,6 +47,107 @@ export default function Dashboard() {
     queryKey: ['today-appointments'],
     queryFn: appointmentsApi.getToday,
   });
+
+  const { data: customers = [] } = useQuery({
+    queryKey: ['customers'],
+    queryFn: customersApi.getAll,
+  });
+
+  const { data: dresses = [] } = useQuery({
+    queryKey: ['dresses'],
+    queryFn: dressesApi.getAll,
+  });
+
+  const createAppointmentMutation = useMutation({
+    mutationFn: appointmentsApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['calendar-events'] });
+      queryClient.invalidateQueries({ queryKey: ['today-appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      closeModal();
+    },
+  });
+
+  const createCustomerMutation = useMutation({
+    mutationFn: customersApi.create,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      setFormData({ ...formData, customer_id: String(data.id) });
+      setIsNewCustomerMode(false);
+      setNewCustomerData({ name: '', phone: '' });
+    },
+  });
+
+  const openModal = () => {
+    setFormData({
+      customer_id: '',
+      dress_id: '',
+      type: 'fitting',
+      date: new Date().toISOString().split('T')[0],
+      time: '',
+      notes: '',
+    });
+    setIsNewCustomerMode(false);
+    setNewCustomerData({ name: '', phone: '' });
+    setIsWalkIn(false);
+    setWalkInName('');
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setIsNewCustomerMode(false);
+    setIsWalkIn(false);
+    setWalkInName('');
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    let notes = formData.notes;
+    if (isWalkIn && walkInName) {
+      notes = `[לקוחה מזדמנת: ${walkInName}]${notes ? '\n' + notes : ''}`;
+    }
+    createAppointmentMutation.mutate({
+      ...formData,
+      notes,
+      customer_id: formData.customer_id ? parseInt(formData.customer_id) : null,
+      dress_id: formData.dress_id ? parseInt(formData.dress_id) : null,
+    });
+  };
+
+  const handleCreateCustomer = () => {
+    if (newCustomerData.name.trim()) {
+      createCustomerMutation.mutate(newCustomerData);
+    }
+  };
+
+  const handleCustomerChange = (value: string) => {
+    if (value === 'new') {
+      setIsNewCustomerMode(true);
+      setIsWalkIn(false);
+      setFormData({ ...formData, customer_id: '' });
+    } else if (value === 'walk-in') {
+      setIsNewCustomerMode(false);
+      setIsWalkIn(true);
+      setFormData({ ...formData, customer_id: '' });
+    } else {
+      setIsNewCustomerMode(false);
+      setIsWalkIn(false);
+      setFormData({ ...formData, customer_id: value });
+    }
+  };
+
+  const customerOptions = [
+    { value: '', label: 'בחר לקוח/ה' },
+    { value: 'walk-in', label: 'לקוחה מזדמנת (ללא רישום)' },
+    { value: 'new', label: '+ צור לקוחה חדשה' },
+    ...customers.map((c: Customer) => ({ value: String(c.id), label: `${c.name}${c.phone ? ` - ${c.phone}` : ''}` })),
+  ];
+
+  const dressOptions = [
+    { value: '', label: 'בחר שמלה (אופציונלי)' },
+    ...dresses.map((d: Dress) => ({ value: String(d.id), label: d.name })),
+  ];
 
   if (statsLoading) {
     return (
@@ -72,9 +200,7 @@ export default function Dashboard() {
           </h1>
           <p className="text-gray-600 text-sm lg:text-base">סקירה כללית של הסטודיו</p>
         </div>
-        <Link to="/calendar">
-          <Button size="sm">+ פגישה חדשה</Button>
-        </Link>
+        <Button size="sm" onClick={openModal}>+ פגישה חדשה</Button>
       </div>
 
       {/* Stats Grid */}
@@ -213,6 +339,116 @@ export default function Dashboard() {
           )}
         </Card>
       </div>
+
+      {/* Add Appointment Modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        title="פגישה חדשה"
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Select
+            label="סוג פגישה"
+            value={formData.type}
+            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+            options={appointmentTypes}
+            required
+          />
+
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="תאריך"
+              type="date"
+              value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              required
+            />
+            <Input
+              label="שעה"
+              type="time"
+              value={formData.time}
+              onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+            />
+          </div>
+
+          <Select
+            label="לקוח/ה"
+            value={isWalkIn ? 'walk-in' : formData.customer_id}
+            onChange={(e) => handleCustomerChange(e.target.value)}
+            options={customerOptions}
+          />
+
+          {isWalkIn && (
+            <Input
+              label="שם הלקוחה המזדמנת"
+              value={walkInName}
+              onChange={(e) => setWalkInName(e.target.value)}
+              placeholder="שם לזיהוי"
+            />
+          )}
+
+          {isNewCustomerMode && (
+            <div className="p-4 bg-gray-50 rounded-lg space-y-3">
+              <p className="text-sm font-medium text-gray-700">יצירת לקוחה חדשה</p>
+              <Input
+                label="שם"
+                value={newCustomerData.name}
+                onChange={(e) => setNewCustomerData({ ...newCustomerData, name: e.target.value })}
+                placeholder="שם הלקוחה"
+                required
+              />
+              <Input
+                label="טלפון"
+                value={newCustomerData.phone}
+                onChange={(e) => setNewCustomerData({ ...newCustomerData, phone: e.target.value })}
+                placeholder="050-0000000"
+              />
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleCreateCustomer}
+                  disabled={!newCustomerData.name.trim() || createCustomerMutation.isPending}
+                >
+                  {createCustomerMutation.isPending ? 'יוצר...' : 'צור לקוחה'}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setIsNewCustomerMode(false)}
+                >
+                  ביטול
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <Select
+            label="שמלה"
+            value={formData.dress_id}
+            onChange={(e) => setFormData({ ...formData, dress_id: e.target.value })}
+            options={dressOptions}
+          />
+
+          <Textarea
+            label="הערות"
+            value={formData.notes}
+            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            rows={2}
+            placeholder="הערות נוספות..."
+          />
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+            <Button type="button" variant="secondary" size="sm" onClick={closeModal}>
+              ביטול
+            </Button>
+            <Button type="submit" size="sm" disabled={createAppointmentMutation.isPending}>
+              הוסף
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

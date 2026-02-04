@@ -33,6 +33,8 @@ export default function Calendar() {
     name: '',
     phone: '',
   });
+  const [isWalkIn, setIsWalkIn] = useState(false);
+  const [walkInName, setWalkInName] = useState('');
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ['calendar-events'],
@@ -105,18 +107,27 @@ export default function Calendar() {
     });
     setIsNewCustomerMode(false);
     setNewCustomerData({ name: '', phone: '' });
+    setIsWalkIn(false);
+    setWalkInName('');
     setIsModalOpen(true);
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
     setIsNewCustomerMode(false);
+    setIsWalkIn(false);
+    setWalkInName('');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    let notes = formData.notes;
+    if (isWalkIn && walkInName) {
+      notes = `[לקוחה מזדמנת: ${walkInName}]${notes ? '\n' + notes : ''}`;
+    }
     createMutation.mutate({
       ...formData,
+      notes,
       customer_id: formData.customer_id ? parseInt(formData.customer_id) : null,
       dress_id: formData.dress_id ? parseInt(formData.dress_id) : null,
     });
@@ -209,12 +220,15 @@ export default function Calendar() {
   const handleCustomerChange = (value: string) => {
     if (value === 'new') {
       setIsNewCustomerMode(true);
+      setIsWalkIn(false);
       setFormData({ ...formData, customer_id: '' });
     } else if (value === 'walk-in') {
       setIsNewCustomerMode(false);
-      setFormData({ ...formData, customer_id: '', notes: formData.notes ? formData.notes + '\n[לקוחה מזדמנת]' : '[לקוחה מזדמנת]' });
+      setIsWalkIn(true);
+      setFormData({ ...formData, customer_id: '' });
     } else {
       setIsNewCustomerMode(false);
+      setIsWalkIn(false);
       setFormData({ ...formData, customer_id: value });
     }
   };
@@ -383,11 +397,21 @@ export default function Calendar() {
           <div>
             <Select
               label="לקוח/ה"
-              value={formData.customer_id}
+              value={isWalkIn ? 'walk-in' : formData.customer_id}
               onChange={(e) => handleCustomerChange(e.target.value)}
               options={customerOptions}
             />
           </div>
+
+          {/* Walk-in Name */}
+          {isWalkIn && (
+            <Input
+              label="שם הלקוחה המזדמנת"
+              value={walkInName}
+              onChange={(e) => setWalkInName(e.target.value)}
+              placeholder="שם לזיהוי"
+            />
+          )}
 
           {/* New Customer Form */}
           {isNewCustomerMode && (
