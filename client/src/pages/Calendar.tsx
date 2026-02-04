@@ -20,6 +20,7 @@ const appointmentTypes = [
 export default function Calendar() {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isNewCustomerMode, setIsNewCustomerMode] = useState(false);
   const [formData, setFormData] = useState({
     customer_id: '',
     dress_id: '',
@@ -27,6 +28,10 @@ export default function Calendar() {
     date: '',
     time: '',
     notes: '',
+  });
+  const [newCustomerData, setNewCustomerData] = useState({
+    name: '',
+    phone: '',
   });
 
   const { data: events = [], isLoading } = useQuery({
@@ -64,6 +69,16 @@ export default function Calendar() {
     },
   });
 
+  const createCustomerMutation = useMutation({
+    mutationFn: customersApi.create,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      setFormData({ ...formData, customer_id: String(data.id) });
+      setIsNewCustomerMode(false);
+      setNewCustomerData({ name: '', phone: '' });
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: appointmentsApi.delete,
     onSuccess: () => {
@@ -88,11 +103,14 @@ export default function Calendar() {
       time: '',
       notes: '',
     });
+    setIsNewCustomerMode(false);
+    setNewCustomerData({ name: '', phone: '' });
     setIsModalOpen(true);
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
+    setIsNewCustomerMode(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -102,6 +120,12 @@ export default function Calendar() {
       customer_id: formData.customer_id ? parseInt(formData.customer_id) : null,
       dress_id: formData.dress_id ? parseInt(formData.dress_id) : null,
     });
+  };
+
+  const handleCreateCustomer = () => {
+    if (newCustomerData.name.trim()) {
+      createCustomerMutation.mutate(newCustomerData);
+    }
   };
 
   const handleDateClick = (info: any) => {
@@ -171,14 +195,29 @@ export default function Calendar() {
   };
 
   const customerOptions = [
-    { value: '', label: 'בחר לקוח/ה (אופציונלי)' },
-    ...customers.map((c: Customer) => ({ value: c.id, label: `${c.name}${c.phone ? ` - ${c.phone}` : ''}` })),
+    { value: '', label: 'בחר לקוח/ה' },
+    { value: 'walk-in', label: '👤 לקוחה מזדמנת (ללא רישום)' },
+    { value: 'new', label: '+ צור לקוחה חדשה' },
+    ...customers.map((c: Customer) => ({ value: String(c.id), label: `${c.name}${c.phone ? ` - ${c.phone}` : ''}` })),
   ];
 
   const dressOptions = [
     { value: '', label: 'בחר שמלה (אופציונלי)' },
-    ...dresses.map((d: Dress) => ({ value: d.id, label: d.name })),
+    ...dresses.map((d: Dress) => ({ value: String(d.id), label: d.name })),
   ];
+
+  const handleCustomerChange = (value: string) => {
+    if (value === 'new') {
+      setIsNewCustomerMode(true);
+      setFormData({ ...formData, customer_id: '' });
+    } else if (value === 'walk-in') {
+      setIsNewCustomerMode(false);
+      setFormData({ ...formData, customer_id: '', notes: formData.notes ? formData.notes + '\n[לקוחה מזדמנת]' : '[לקוחה מזדמנת]' });
+    } else {
+      setIsNewCustomerMode(false);
+      setFormData({ ...formData, customer_id: value });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -340,12 +379,53 @@ export default function Calendar() {
             />
           </div>
 
-          <Select
-            label="לקוח/ה"
-            value={formData.customer_id}
-            onChange={(e) => setFormData({ ...formData, customer_id: e.target.value })}
-            options={customerOptions}
-          />
+          {/* Customer Selection */}
+          <div>
+            <Select
+              label="לקוח/ה"
+              value={formData.customer_id}
+              onChange={(e) => handleCustomerChange(e.target.value)}
+              options={customerOptions}
+            />
+          </div>
+
+          {/* New Customer Form */}
+          {isNewCustomerMode && (
+            <div className="p-4 bg-gray-50 rounded-lg space-y-3">
+              <p className="text-sm font-medium text-gray-700">יצירת לקוחה חדשה</p>
+              <Input
+                label="שם"
+                value={newCustomerData.name}
+                onChange={(e) => setNewCustomerData({ ...newCustomerData, name: e.target.value })}
+                placeholder="שם הלקוחה"
+                required
+              />
+              <Input
+                label="טלפון"
+                value={newCustomerData.phone}
+                onChange={(e) => setNewCustomerData({ ...newCustomerData, phone: e.target.value })}
+                placeholder="050-0000000"
+              />
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleCreateCustomer}
+                  disabled={!newCustomerData.name.trim() || createCustomerMutation.isPending}
+                >
+                  {createCustomerMutation.isPending ? 'יוצר...' : 'צור לקוחה'}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setIsNewCustomerMode(false)}
+                >
+                  ביטול
+                </Button>
+              </div>
+            </div>
+          )}
 
           <Select
             label="שמלה"

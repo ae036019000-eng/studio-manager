@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { reportsApi, rentalsApi, appointmentsApi, whatsappHelper } from '../services/api';
 import Card, { StatCard } from '../components/Card';
+import Button from '../components/Button';
 import type { Rental, Appointment } from '../types';
 
 export default function Dashboard() {
@@ -63,12 +65,16 @@ export default function Dashboard() {
   return (
     <div className="animate-slide-up pb-4">
       {/* Header */}
-      <div className="mb-6 lg:mb-10">
-        <h1 className="font-sans text-2xl lg:text-4xl font-semibold text-gray-900 mb-1 lg:mb-2">
-          דשבורד
-        </h1>
-        <p className="text-gray-600 text-sm lg:text-base">סקירה כללית של הסטודיו</p>
-        <div className="gold-accent mt-3 lg:mt-4 w-16 lg:w-20"></div>
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6 lg:mb-10">
+        <div>
+          <h1 className="font-sans text-2xl lg:text-4xl font-semibold text-gray-900 mb-1 lg:mb-2">
+            דשבורד
+          </h1>
+          <p className="text-gray-600 text-sm lg:text-base">סקירה כללית של הסטודיו</p>
+        </div>
+        <Link to="/calendar">
+          <Button size="sm">+ פגישה חדשה</Button>
+        </Link>
       </div>
 
       {/* Stats Grid */}
