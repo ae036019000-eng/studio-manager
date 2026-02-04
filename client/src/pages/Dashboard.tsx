@@ -61,7 +61,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="animate-slide-up pb-20 lg:pb-0">
+    <div className="animate-slide-up pb-4">
       {/* Header */}
       <div className="mb-6 lg:mb-10">
         <h1 className="font-serif text-2xl lg:text-4xl font-semibold text-champagne-800 mb-1 lg:mb-2">

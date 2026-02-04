@@ -189,7 +189,7 @@ export default function Calendar() {
   }
 
   return (
-    <div className="animate-slide-up pb-20 lg:pb-0">
+    <div className="animate-slide-up pb-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6 lg:mb-10">
         <div>

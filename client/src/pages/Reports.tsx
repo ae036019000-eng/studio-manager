@@ -80,7 +80,7 @@ export default function Reports() {
   ];
 
   return (
-    <div className="animate-slide-up pb-20 lg:pb-0">
+    <div className="animate-slide-up pb-4">
       {/* Header */}
       <div className="flex flex-col gap-4 mb-6 lg:mb-10">
         <div>
