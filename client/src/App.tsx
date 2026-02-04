@@ -7,6 +7,7 @@ import Customers from './pages/Customers';
 import Rentals from './pages/Rentals';
 import Calendar from './pages/Calendar';
 import Reports from './pages/Reports';
+import Settings from './pages/Settings';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,6 +30,7 @@ function App() {
             <Route path="/rentals" element={<Rentals />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/reports" element={<Reports />} />
+            <Route path="/settings" element={<Settings />} />
           </Routes>
         </Layout>
       </BrowserRouter>

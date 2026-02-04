@@ -8,6 +8,7 @@ const menuItems = [
   { path: '/rentals', label: 'השכרות', icon: '◆' },
   { path: '/calendar', label: 'לוח שנה', icon: '▣' },
   { path: '/reports', label: 'דוחות', icon: '◇' },
+  { path: '/settings', label: 'הגדרות', icon: '⚙' },
 ];
 
 interface LayoutProps {

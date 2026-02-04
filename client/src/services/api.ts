@@ -123,6 +123,22 @@ export const whatsappHelper = {
   }
 };
 
+// Settings API
+export const settingsApi = {
+  getAll: () => fetchApi<Record<string, string>>('/settings'),
+  get: (key: string) => fetchApi<{ key: string; value: string }>(`/settings/${key}`),
+  update: (key: string, value: string) =>
+    fetchApi<{ key: string; value: string }>(`/settings/${key}`, {
+      method: 'PUT',
+      body: JSON.stringify({ value }),
+    }),
+  updateBulk: (settings: Record<string, string>) =>
+    fetchApi<{ success: boolean }>('/settings/bulk', {
+      method: 'POST',
+      body: JSON.stringify(settings),
+    }),
+};
+
 // Upload API
 export const uploadApi = {
   uploadImage: async (file: File): Promise<{ path: string; filename: string }> => {

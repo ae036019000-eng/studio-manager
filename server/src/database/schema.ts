@@ -50,7 +50,7 @@ async function runMigrations(): Promise<void> {
       description TEXT,
       size TEXT,
       color TEXT,
-      price_per_day REAL NOT NULL,
+      rental_price REAL NOT NULL,
       image_path TEXT,
       status TEXT DEFAULT 'available',
       created_at TEXT DEFAULT CURRENT_TIMESTAMP

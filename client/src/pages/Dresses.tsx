@@ -36,7 +36,7 @@ export default function Dresses() {
     description: '',
     size: '',
     color: '',
-    price_per_day: '',
+    rental_price: '',
     image_path: '',
     status: 'available',
   });
@@ -78,7 +78,7 @@ export default function Dresses() {
         description: dress.description || '',
         size: dress.size || '',
         color: dress.color || '',
-        price_per_day: String(dress.price_per_day),
+        rental_price: String(dress.rental_price),
         image_path: dress.image_path || '',
         status: dress.status,
       });
@@ -89,7 +89,7 @@ export default function Dresses() {
         description: '',
         size: '',
         color: '',
-        price_per_day: '',
+        rental_price: '',
         image_path: '',
         status: 'available',
       });
@@ -106,7 +106,7 @@ export default function Dresses() {
     e.preventDefault();
     const data = {
       ...formData,
-      price_per_day: parseFloat(formData.price_per_day) || 0,
+      rental_price: parseFloat(formData.rental_price) || 0,
     };
 
     if (editingDress) {
@@ -233,8 +233,8 @@ export default function Dresses() {
                   {dress.color && <span>{dress.color}</span>}
                 </div>
                 <p className="text-gold-600 font-semibold text-base lg:text-lg mb-3 lg:mb-4">
-                  {formatCurrency(dress.price_per_day)}
-                  <span className="text-champagne-600 text-xs lg:text-sm font-normal"> / יום</span>
+                  {formatCurrency(dress.rental_price)}
+                  <span className="text-champagne-600 text-xs lg:text-sm font-normal"> / אירוע</span>
                 </p>
                 <div className="flex gap-2">
                   <Button
@@ -305,10 +305,10 @@ export default function Dresses() {
 
           <div className="grid grid-cols-2 gap-6">
             <Input
-              label="מחיר ליום (₪)"
+              label="מחיר השכרה (₪)"
               type="number"
-              value={formData.price_per_day}
-              onChange={(e) => setFormData({ ...formData, price_per_day: e.target.value })}
+              value={formData.rental_price}
+              onChange={(e) => setFormData({ ...formData, rental_price: e.target.value })}
               required
               min="0"
               step="0.01"

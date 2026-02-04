@@ -159,16 +159,12 @@ export default function Rentals() {
     });
   };
 
-  const calculatePrice = () => {
-    if (formData.dress_id && formData.start_date && formData.end_date) {
-      const dress = dresses.find((d: Dress) => d.id === parseInt(formData.dress_id));
-      if (dress) {
-        const start = new Date(formData.start_date);
-        const end = new Date(formData.end_date);
-        const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-        const price = days * dress.price_per_day;
-        setFormData({ ...formData, total_price: String(price) });
-      }
+  const fillPriceFromDress = (dressId: string) => {
+    const dress = dresses.find((d: Dress) => d.id === parseInt(dressId));
+    if (dress && dress.rental_price) {
+      setFormData(prev => ({ ...prev, dress_id: dressId, total_price: String(dress.rental_price) }));
+    } else {
+      setFormData(prev => ({ ...prev, dress_id: dressId }));
     }
   };
 
@@ -395,7 +391,7 @@ export default function Rentals() {
             <Select
               label="שמלה"
               value={formData.dress_id}
-              onChange={(e) => setFormData({ ...formData, dress_id: e.target.value })}
+              onChange={(e) => fillPriceFromDress(e.target.value)}
               options={dressOptions}
               required
               disabled={!!editingRental}
@@ -413,20 +409,18 @@ export default function Rentals() {
 
           <div className="grid grid-cols-2 gap-4 lg:gap-6">
             <Input
-              label="תאריך התחלה"
+              label="תאריך אירוע"
               type="date"
               value={formData.start_date}
               onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-              onBlur={calculatePrice}
               required
             />
 
             <Input
-              label="תאריך סיום"
+              label="תאריך החזרה"
               type="date"
               value={formData.end_date}
               onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-              onBlur={calculatePrice}
               required
             />
           </div>

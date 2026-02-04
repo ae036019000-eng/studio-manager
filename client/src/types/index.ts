@@ -4,7 +4,7 @@ export interface Dress {
   description: string | null;
   size: string | null;
   color: string | null;
-  price_per_day: number;
+  rental_price: number;
   image_path: string | null;
   status: 'available' | 'rented' | 'maintenance';
   created_at: string;
@@ -38,7 +38,7 @@ export interface Rental {
   customer_name?: string;
   customer_phone?: string;
   customer_email?: string;
-  price_per_day?: number;
+  rental_price?: number;
 }
 
 export interface Payment {
