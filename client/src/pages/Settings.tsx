@@ -42,7 +42,7 @@ export default function Settings() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-gold-400 text-4xl animate-pulse">◈</div>
+        <div className="text-gray-500 text-4xl animate-pulse">◈</div>
       </div>
     );
   }
@@ -51,17 +51,17 @@ export default function Settings() {
     <div className="animate-slide-up pb-4">
       {/* Header */}
       <div className="mb-6 lg:mb-10">
-        <h1 className="font-serif text-2xl lg:text-4xl font-semibold text-champagne-800 mb-1 lg:mb-2">
+        <h1 className="font-sans text-2xl lg:text-4xl font-semibold text-gray-900 mb-1 lg:mb-2">
           הגדרות
         </h1>
-        <p className="text-champagne-700 text-sm lg:text-base">ניהול הגדרות הסטודיו</p>
+        <p className="text-gray-600 text-sm lg:text-base">ניהול הגדרות הסטודיו</p>
         <div className="gold-accent mt-3 lg:mt-4 w-12 lg:w-16"></div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Studio Info */}
         <Card className="p-4 lg:p-6" hover={false}>
-          <h2 className="font-serif text-lg lg:text-xl font-semibold text-champagne-800 mb-4">
+          <h2 className="font-sans text-lg lg:text-xl font-semibold text-gray-900 mb-4">
             פרטי הסטודיו
           </h2>
           <div className="space-y-4">
@@ -82,10 +82,10 @@ export default function Settings() {
 
         {/* WhatsApp Templates */}
         <Card className="p-4 lg:p-6" hover={false}>
-          <h2 className="font-serif text-lg lg:text-xl font-semibold text-champagne-800 mb-4">
+          <h2 className="font-sans text-lg lg:text-xl font-semibold text-gray-900 mb-4">
             תבניות הודעות WhatsApp
           </h2>
-          <p className="text-sm text-champagne-600 mb-4">
+          <p className="text-sm text-gray-500 mb-4">
             השתמש ב: {'{customer_name}'}, {'{dress_name}'}, {'{date}'}, {'{time}'}
           </p>
           <div className="space-y-4">

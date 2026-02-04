@@ -23,8 +23,8 @@ export default function Table<T>({
   if (data.length === 0) {
     return (
       <div className="text-center py-16">
-        <div className="text-champagne-300 text-5xl mb-4">◇</div>
-        <p className="text-champagne-700 font-medium">{emptyMessage}</p>
+        <div className="text-gray-300 text-5xl mb-4">◇</div>
+        <p className="text-gray-600 font-medium">{emptyMessage}</p>
       </div>
     );
   }
@@ -33,32 +33,32 @@ export default function Table<T>({
     <div className="overflow-x-auto">
       <table className="w-full">
         <thead>
-          <tr className="border-b border-champagne-200">
+          <tr className="border-b border-gray-200">
             {columns.map((col) => (
               <th
                 key={String(col.key)}
-                className={`px-3 lg:px-6 py-3 lg:py-4 text-right text-xs lg:text-sm font-semibold text-champagne-600 tracking-wide uppercase ${col.className || ''}`}
+                className={`px-3 lg:px-6 py-3 lg:py-4 text-right text-xs lg:text-sm font-semibold text-gray-500 tracking-wide uppercase ${col.className || ''}`}
               >
                 {col.header}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-champagne-100">
+        <tbody className="divide-y divide-gray-100">
           {data.map((item) => (
             <tr
               key={String(item[keyField])}
               onClick={() => onRowClick?.(item)}
               className={`
                 transition-all duration-300
-                hover:bg-gradient-to-l hover:from-gold-50 hover:to-transparent
+                hover:bg-gradient-to-l hover:from-gray-50 hover:to-transparent
                 ${onRowClick ? 'cursor-pointer' : ''}
               `}
             >
               {columns.map((col) => (
                 <td
                   key={String(col.key)}
-                  className={`px-3 lg:px-6 py-3 lg:py-5 text-xs lg:text-sm text-champagne-800 ${col.className || ''}`}
+                  className={`px-3 lg:px-6 py-3 lg:py-5 text-xs lg:text-sm text-gray-800 ${col.className || ''}`}
                 >
                   {col.render
                     ? col.render(item)

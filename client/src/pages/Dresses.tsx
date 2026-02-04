@@ -167,7 +167,7 @@ export default function Dresses() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-gold-400 text-4xl animate-pulse">◈</div>
+        <div className="text-gray-500 text-4xl animate-pulse">◈</div>
       </div>
     );
   }
@@ -177,10 +177,10 @@ export default function Dresses() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6 lg:mb-10">
         <div>
-          <h1 className="font-serif text-2xl lg:text-4xl font-semibold text-champagne-800 mb-1 lg:mb-2">
+          <h1 className="font-sans text-2xl lg:text-4xl font-semibold text-gray-900 mb-1 lg:mb-2">
             שמלות
           </h1>
-          <p className="text-champagne-700 text-sm lg:text-base">ניהול קולקציית השמלות</p>
+          <p className="text-gray-600 text-sm lg:text-base">ניהול קולקציית השמלות</p>
           <div className="gold-accent mt-3 lg:mt-4 w-12 lg:w-16"></div>
         </div>
         <Button onClick={() => openModal()} className="w-full sm:w-auto">
@@ -200,14 +200,14 @@ export default function Dresses() {
       {/* Grid */}
       {filteredDresses.length === 0 ? (
         <Card className="p-8 lg:p-16 text-center">
-          <div className="text-champagne-300 text-4xl lg:text-5xl mb-4">❖</div>
-          <p className="text-champagne-700">אין שמלות להצגה</p>
+          <div className="text-gray-200 text-4xl lg:text-5xl mb-4">❖</div>
+          <p className="text-gray-600">אין שמלות להצגה</p>
         </Card>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-8">
           {filteredDresses.map((dress: Dress) => (
             <Card key={dress.id} className="overflow-hidden group">
-              <div className="aspect-[3/4] bg-gradient-to-br from-champagne-50 to-champagne-100 relative overflow-hidden">
+              <div className="aspect-[3/4] bg-gradient-to-br from-gray-50 to-gray-100 relative overflow-hidden">
                 {dress.image_path ? (
                   <img
                     src={dress.image_path}
@@ -216,7 +216,7 @@ export default function Dresses() {
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <span className="text-6xl text-champagne-300">❖</span>
+                    <span className="text-6xl text-gray-200">❖</span>
                   </div>
                 )}
                 <div className="absolute top-4 left-4">
@@ -224,17 +224,17 @@ export default function Dresses() {
                 </div>
               </div>
               <div className="p-3 lg:p-6">
-                <h3 className="font-serif text-base lg:text-xl font-semibold text-champagne-800 mb-1 lg:mb-2 truncate">
+                <h3 className="font-sans text-base lg:text-xl font-semibold text-gray-900 mb-1 lg:mb-2 truncate">
                   {dress.name}
                 </h3>
-                <div className="text-xs lg:text-sm text-champagne-700 space-x-reverse space-x-1 lg:space-x-2 rtl:space-x-reverse mb-2 lg:mb-3">
+                <div className="text-xs lg:text-sm text-gray-600 space-x-reverse space-x-1 lg:space-x-2 rtl:space-x-reverse mb-2 lg:mb-3">
                   {dress.size && <span>מידה {dress.size}</span>}
                   {dress.size && dress.color && <span>•</span>}
                   {dress.color && <span>{dress.color}</span>}
                 </div>
-                <p className="text-gold-600 font-semibold text-base lg:text-lg mb-3 lg:mb-4">
+                <p className="text-gray-700 font-semibold text-base lg:text-lg mb-3 lg:mb-4">
                   {formatCurrency(dress.rental_price)}
-                  <span className="text-champagne-600 text-xs lg:text-sm font-normal"> / אירוע</span>
+                  <span className="text-gray-500 text-xs lg:text-sm font-normal"> / אירוע</span>
                 </p>
                 <div className="flex gap-2">
                   <Button
@@ -323,7 +323,7 @@ export default function Dresses() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-champagne-700 mb-2 tracking-wide">
+            <label className="block text-sm font-medium text-gray-600 mb-2 tracking-wide">
               תמונה
             </label>
             <input
@@ -331,13 +331,13 @@ export default function Dresses() {
               accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
               onChange={handleImageUpload}
               disabled={isUploading}
-              className="w-full text-sm text-champagne-600 file:mr-4 file:py-2 file:px-4
+              className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4
                        file:rounded-xl file:border-0 file:text-sm file:font-medium
-                       file:bg-gold-50 file:text-gold-700 hover:file:bg-gold-100
+                       file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200
                        file:cursor-pointer file:transition-colors disabled:opacity-50"
             />
             {isUploading && (
-              <p className="mt-2 text-sm text-gold-600">מעלה תמונה...</p>
+              <p className="mt-2 text-sm text-gray-700">מעלה תמונה...</p>
             )}
             {uploadError && (
               <p className="mt-2 text-sm text-red-600">{uploadError}</p>
@@ -347,13 +347,13 @@ export default function Dresses() {
                 <img
                   src={formData.image_path}
                   alt="Preview"
-                  className="w-32 h-40 object-cover rounded-xl border border-champagne-200"
+                  className="w-32 h-40 object-cover rounded-xl border border-gray-200"
                 />
               </div>
             )}
           </div>
 
-          <div className="flex justify-end gap-4 pt-6 border-t border-champagne-100">
+          <div className="flex justify-end gap-4 pt-6 border-t border-gray-100">
             <Button type="button" variant="secondary" onClick={closeModal}>
               ביטול
             </Button>

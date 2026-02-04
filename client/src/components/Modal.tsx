@@ -34,39 +34,36 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
       <div className="flex min-h-screen items-end lg:items-center justify-center p-0 lg:p-4">
         {/* Backdrop */}
         <div
-          className="fixed inset-0 bg-champagne-900/30 backdrop-blur-sm transition-opacity animate-fade-in"
+          className="fixed inset-0 bg-black/30 transition-opacity"
           onClick={onClose}
         />
 
         {/* Modal */}
         <div
           className={`
-            relative bg-white rounded-t-2xl lg:rounded-2xl shadow-soft-lg w-full ${sizeClasses[size]}
-            transform transition-all animate-scale-in
-            border border-champagne-100
+            relative bg-white rounded-t-xl lg:rounded-xl w-full ${sizeClasses[size]}
+            transform transition-all animate-slide-up
             max-h-[90vh] lg:max-h-[85vh] overflow-y-auto
           `}
         >
           {/* Header */}
-          <div className="px-4 lg:px-8 py-4 lg:py-6 border-b border-champagne-100 sticky top-0 bg-white z-10">
+          <div className="px-5 py-4 border-b border-gray-100 sticky top-0 bg-white z-10">
             <div className="flex items-center justify-between">
-              <h3 className="font-serif text-xl lg:text-2xl font-semibold text-champagne-800">{title}</h3>
+              <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
               <button
                 onClick={onClose}
-                className="w-10 h-10 rounded-xl flex items-center justify-center
-                         text-champagne-400 hover:text-champagne-600
-                         hover:bg-champagne-100 transition-all duration-300"
+                className="w-8 h-8 rounded-lg flex items-center justify-center
+                         text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
-            <div className="gold-accent mt-3 lg:mt-4 w-12"></div>
           </div>
 
           {/* Content */}
-          <div className="px-4 lg:px-8 py-4 lg:py-6">{children}</div>
+          <div className="px-5 py-4">{children}</div>
         </div>
       </div>
     </div>

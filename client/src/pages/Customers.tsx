@@ -189,7 +189,7 @@ export default function Customers() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-gold-400 text-4xl animate-pulse">◈</div>
+        <div className="text-gray-500 text-4xl animate-pulse">◈</div>
       </div>
     );
   }
@@ -199,10 +199,10 @@ export default function Customers() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6 lg:mb-10">
         <div>
-          <h1 className="font-serif text-2xl lg:text-4xl font-semibold text-champagne-800 mb-1 lg:mb-2">
+          <h1 className="font-sans text-2xl lg:text-4xl font-semibold text-gray-900 mb-1 lg:mb-2">
             לקוחות
           </h1>
-          <p className="text-champagne-700 text-sm lg:text-base">ניהול רשימת הלקוחות</p>
+          <p className="text-gray-600 text-sm lg:text-base">ניהול רשימת הלקוחות</p>
           <div className="gold-accent mt-3 lg:mt-4 w-12 lg:w-16"></div>
         </div>
         <Button onClick={() => openModal()} className="w-full sm:w-auto">
@@ -223,17 +223,17 @@ export default function Customers() {
       <div className="lg:hidden space-y-3">
         {filteredCustomers.length === 0 ? (
           <Card className="p-8 text-center">
-            <div className="text-champagne-300 text-4xl mb-4">✦</div>
-            <p className="text-champagne-700">אין לקוחות להצגה</p>
+            <div className="text-gray-200 text-4xl mb-4">✦</div>
+            <p className="text-gray-600">אין לקוחות להצגה</p>
           </Card>
         ) : (
           filteredCustomers.map((customer: Customer) => (
             <Card key={customer.id} className="p-4">
               <div className="flex justify-between items-start mb-3">
                 <div>
-                  <h3 className="font-serif text-lg font-semibold text-champagne-800">{customer.name}</h3>
+                  <h3 className="font-sans text-lg font-semibold text-gray-900">{customer.name}</h3>
                   {customer.phone && (
-                    <a href={`tel:${customer.phone}`} className="text-sm text-gold-600">{customer.phone}</a>
+                    <a href={`tel:${customer.phone}`} className="text-sm text-gray-700">{customer.phone}</a>
                   )}
                 </div>
                 <div className="flex gap-2">
@@ -254,10 +254,10 @@ export default function Customers() {
                 </div>
               </div>
               {customer.email && (
-                <p className="text-sm text-champagne-600 truncate">{customer.email}</p>
+                <p className="text-sm text-gray-500 truncate">{customer.email}</p>
               )}
-              <div className="flex justify-between items-center mt-3 pt-3 border-t border-champagne-100">
-                <span className="text-xs text-champagne-500">הצטרף/ה: {formatDate(customer.created_at)}</span>
+              <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100">
+                <span className="text-xs text-gray-400">הצטרף/ה: {formatDate(customer.created_at)}</span>
                 <Button size="sm" variant="ghost" onClick={() => openHistoryModal(customer)}>
                   היסטוריה
                 </Button>
@@ -323,7 +323,7 @@ export default function Customers() {
             placeholder="הערות נוספות..."
           />
 
-          <div className="flex justify-end gap-4 pt-6 border-t border-champagne-100">
+          <div className="flex justify-end gap-4 pt-6 border-t border-gray-100">
             <Button type="button" variant="secondary" onClick={closeModal}>
               ביטול
             </Button>

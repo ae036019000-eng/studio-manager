@@ -183,7 +183,7 @@ export default function Calendar() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-gold-400 text-4xl animate-pulse">◈</div>
+        <div className="text-gray-500 text-4xl animate-pulse">◈</div>
       </div>
     );
   }
@@ -193,10 +193,10 @@ export default function Calendar() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6 lg:mb-10">
         <div>
-          <h1 className="font-serif text-2xl lg:text-4xl font-semibold text-champagne-800 mb-1 lg:mb-2">
+          <h1 className="font-sans text-2xl lg:text-4xl font-semibold text-gray-900 mb-1 lg:mb-2">
             לוח שנה
           </h1>
-          <p className="text-champagne-700 text-sm lg:text-base">השכרות ופגישות</p>
+          <p className="text-gray-600 text-sm lg:text-base">השכרות ופגישות</p>
           <div className="gold-accent mt-3 lg:mt-4 w-12 lg:w-16"></div>
         </div>
         <Button onClick={() => openModal()} className="w-full sm:w-auto">
@@ -208,21 +208,21 @@ export default function Calendar() {
         {/* Today's Appointments */}
         <Card className="p-4 lg:p-6 lg:col-span-1" hover={false}>
           <div className="flex items-center gap-2 mb-4">
-            <span className="text-gold-500">◆</span>
-            <h2 className="font-serif text-lg font-semibold text-champagne-800">פגישות היום</h2>
+            <span className="text-gray-600">◆</span>
+            <h2 className="font-sans text-lg font-semibold text-gray-900">פגישות היום</h2>
           </div>
           {todayAppointments.length === 0 ? (
-            <p className="text-champagne-600 text-sm text-center py-4">אין פגישות היום</p>
+            <p className="text-gray-500 text-sm text-center py-4">אין פגישות היום</p>
           ) : (
             <div className="space-y-3">
               {todayAppointments.map((apt: Appointment) => (
-                <div key={apt.id} className="p-3 bg-champagne-50 rounded-lg">
+                <div key={apt.id} className="p-3 bg-gray-50 rounded-lg">
                   <div className="flex justify-between items-start">
                     <div>
-                      <span className="text-xs font-medium text-gold-600">{getTypeLabel(apt.type)}</span>
-                      {apt.time && <span className="text-xs text-champagne-600 mr-2">{apt.time}</span>}
-                      <p className="text-sm font-medium text-champagne-800">{apt.customer_name || 'ללא לקוח'}</p>
-                      {apt.dress_name && <p className="text-xs text-champagne-600">{apt.dress_name}</p>}
+                      <span className="text-xs font-medium text-gray-700">{getTypeLabel(apt.type)}</span>
+                      {apt.time && <span className="text-xs text-gray-500 mr-2">{apt.time}</span>}
+                      <p className="text-sm font-medium text-gray-900">{apt.customer_name || 'ללא לקוח'}</p>
+                      {apt.dress_name && <p className="text-xs text-gray-500">{apt.dress_name}</p>}
                     </div>
                     {apt.customer_phone && (
                       <a
@@ -247,7 +247,7 @@ export default function Calendar() {
             <>
               <div className="flex items-center gap-2 mt-6 mb-4">
                 <span className="text-amber-500">◇</span>
-                <h2 className="font-serif text-lg font-semibold text-champagne-800">תזכורות למחר</h2>
+                <h2 className="font-sans text-lg font-semibold text-gray-900">תזכורות למחר</h2>
               </div>
               <div className="space-y-3">
                 {reminders.map((apt: Appointment) => (
@@ -255,7 +255,7 @@ export default function Calendar() {
                     <div className="flex justify-between items-start">
                       <div>
                         <span className="text-xs font-medium text-amber-600">{getTypeLabel(apt.type)}</span>
-                        <p className="text-sm font-medium text-champagne-800">{apt.customer_name || 'ללא לקוח'}</p>
+                        <p className="text-sm font-medium text-gray-900">{apt.customer_name || 'ללא לקוח'}</p>
                       </div>
                       {apt.customer_phone && (
                         <Button
@@ -305,24 +305,24 @@ export default function Calendar() {
       {/* Legend */}
       <div className="mt-4 lg:mt-6 flex flex-wrap gap-3 lg:gap-6">
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-gold-500"></div>
-          <span className="text-champagne-600 text-sm">השכרה פעילה</span>
+          <div className="w-3 h-3 rounded-full bg-gray-600"></div>
+          <span className="text-gray-500 text-sm">השכרה פעילה</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
-          <span className="text-champagne-600 text-sm">הושלם</span>
+          <span className="text-gray-500 text-sm">הושלם</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-purple-500"></div>
-          <span className="text-champagne-600 text-sm">מדידה</span>
+          <span className="text-gray-500 text-sm">מדידה</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-amber-500"></div>
-          <span className="text-champagne-600 text-sm">איסוף</span>
+          <span className="text-gray-500 text-sm">איסוף</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-red-500"></div>
-          <span className="text-champagne-600 text-sm">החזרה</span>
+          <span className="text-gray-500 text-sm">החזרה</span>
         </div>
       </div>
 
@@ -379,7 +379,7 @@ export default function Calendar() {
             placeholder="הערות נוספות..."
           />
 
-          <div className="flex justify-end gap-4 pt-4 border-t border-champagne-100">
+          <div className="flex justify-end gap-4 pt-4 border-t border-gray-100">
             <Button type="button" variant="secondary" onClick={closeModal}>
               ביטול
             </Button>

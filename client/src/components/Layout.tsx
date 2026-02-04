@@ -20,15 +20,15 @@ export default function Layout({ children }: LayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-cream-100">
+    <div className="flex min-h-screen bg-gray-50">
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-champagne-200 z-50 px-4 py-3 flex items-center justify-between">
+      <div className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-gray-200 z-50 px-4 py-3 flex items-center justify-between">
         <img src="/logo.jpg" alt="Rachel" className="h-8 object-contain" />
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="p-2 rounded-lg hover:bg-champagne-100 transition-colors"
+          className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
         >
-          <svg className="w-6 h-6 text-champagne-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-6 h-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             {isMobileMenuOpen ? (
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             ) : (
@@ -41,29 +41,28 @@ export default function Layout({ children }: LayoutProps) {
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black/30 z-40"
+          className="lg:hidden fixed inset-0 bg-black/20 z-40"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
       {/* Sidebar - Desktop & Mobile */}
       <aside className={`
-        fixed lg:relative top-0 right-0 h-full w-72 bg-white border-l border-champagne-200 shadow-soft z-50
+        fixed lg:relative top-0 right-0 h-full w-64 bg-white border-l border-gray-200 z-50
         transform transition-transform duration-300 ease-out
         ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
         lg:flex-shrink-0
       `}>
         {/* Logo/Brand */}
-        <div className="p-6 lg:p-8 border-b border-champagne-100 mt-14 lg:mt-0">
-          <img src="/logo.jpg" alt="Rachel" className="h-12 lg:h-16 object-contain" />
-          <p className="text-champagne-700 text-sm mt-2 tracking-widest uppercase">
-            השכרת שמלות יוקרה
+        <div className="p-5 lg:p-6 border-b border-gray-100 mt-14 lg:mt-0">
+          <img src="/logo.jpg" alt="Rachel" className="h-10 lg:h-12 object-contain" />
+          <p className="text-gray-500 text-xs mt-2 tracking-wide">
+            השכרת שמלות
           </p>
-          <div className="gold-accent mt-4 w-16"></div>
         </div>
 
         {/* Navigation */}
-        <nav className="mt-4 lg:mt-6 px-3 lg:px-4">
+        <nav className="mt-4 px-3">
           {menuItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
@@ -71,39 +70,26 @@ export default function Layout({ children }: LayoutProps) {
                 key={item.path}
                 to={item.path}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`flex items-center gap-3 lg:gap-4 px-4 lg:px-5 py-3 lg:py-4 mb-2 rounded-xl transition-all duration-300 group ${
+                className={`flex items-center gap-3 px-4 py-3 mb-1 rounded-lg transition-all duration-200 ${
                   isActive
-                    ? 'bg-gradient-to-l from-gold-50 to-gold-100 text-gold-700 shadow-sm'
-                    : 'text-champagne-600 hover:bg-champagne-50 hover:text-champagne-800'
+                    ? 'bg-gray-900 text-white'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                 }`}
               >
-                <span className={`text-lg transition-transform duration-300 ${
-                  isActive ? 'text-gold-500' : 'text-champagne-600 group-hover:text-gold-400'
-                } group-hover:scale-110`}>
-                  {item.icon}
-                </span>
-                <span className={`font-medium tracking-wide ${
-                  isActive ? 'font-semibold' : ''
-                }`}>
-                  {item.label}
-                </span>
-                {isActive && (
-                  <div className="mr-auto w-1.5 h-1.5 rounded-full bg-gold-500"></div>
-                )}
+                <span className="text-sm">{item.icon}</span>
+                <span className="font-medium text-sm">{item.label}</span>
               </Link>
             );
           })}
         </nav>
-
       </aside>
 
       {/* Main content */}
       <main className="flex-1 overflow-auto pt-14 lg:pt-0">
-        <div className="p-4 lg:p-10 max-w-7xl mx-auto animate-fade-in">
+        <div className="p-4 lg:p-8 max-w-6xl mx-auto">
           {children}
         </div>
       </main>
-
     </div>
   );
 }

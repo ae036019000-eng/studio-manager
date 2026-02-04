@@ -45,7 +45,7 @@ export default function Reports() {
       key: 'total',
       header: 'סה״כ הכנסות',
       render: (r: RevenueReport) => (
-        <span className="font-semibold text-gold-600">{formatCurrency(r.total)}</span>
+        <span className="font-semibold text-gray-700">{formatCurrency(r.total)}</span>
       ),
     },
     {
@@ -61,7 +61,7 @@ export default function Reports() {
       key: 'total_revenue',
       header: 'סה״כ הכנסות',
       render: (d: PopularDress) => (
-        <span className="font-semibold text-gold-600">{formatCurrency(d.total_revenue)}</span>
+        <span className="font-semibold text-gray-700">{formatCurrency(d.total_revenue)}</span>
       ),
     },
   ];
@@ -74,7 +74,7 @@ export default function Reports() {
       key: 'total_spent',
       header: 'סה״כ הוצאות',
       render: (c: ReturningCustomer) => (
-        <span className="font-semibold text-gold-600">{formatCurrency(c.total_spent)}</span>
+        <span className="font-semibold text-gray-700">{formatCurrency(c.total_spent)}</span>
       ),
     },
   ];
@@ -84,10 +84,10 @@ export default function Reports() {
       {/* Header */}
       <div className="flex flex-col gap-4 mb-6 lg:mb-10">
         <div>
-          <h1 className="font-serif text-2xl lg:text-4xl font-semibold text-champagne-800 mb-1 lg:mb-2">
+          <h1 className="font-sans text-2xl lg:text-4xl font-semibold text-gray-900 mb-1 lg:mb-2">
             דוחות
           </h1>
-          <p className="text-champagne-700 text-sm lg:text-base">סטטיסטיקות וניתוח נתונים</p>
+          <p className="text-gray-600 text-sm lg:text-base">סטטיסטיקות וניתוח נתונים</p>
           <div className="gold-accent mt-3 lg:mt-4 w-12 lg:w-16"></div>
         </div>
         <div className="flex flex-wrap gap-2 lg:gap-3">
@@ -107,8 +107,8 @@ export default function Reports() {
         {/* Revenue Report */}
         <Card className="p-4 lg:p-8" hover={false}>
           <div className="flex items-center gap-2 lg:gap-3 mb-4 lg:mb-6">
-            <span className="text-gold-500 text-lg lg:text-xl">◈</span>
-            <h2 className="font-serif text-lg lg:text-2xl font-semibold text-champagne-800">
+            <span className="text-gray-600 text-lg lg:text-xl">◈</span>
+            <h2 className="font-sans text-lg lg:text-2xl font-semibold text-gray-900">
               הכנסות לפי חודש
             </h2>
           </div>
@@ -123,8 +123,8 @@ export default function Reports() {
         {/* Popular Dresses */}
         <Card className="p-4 lg:p-8" hover={false}>
           <div className="flex items-center gap-2 lg:gap-3 mb-4 lg:mb-6">
-            <span className="text-gold-500 text-lg lg:text-xl">❖</span>
-            <h2 className="font-serif text-lg lg:text-2xl font-semibold text-champagne-800">
+            <span className="text-gray-600 text-lg lg:text-xl">❖</span>
+            <h2 className="font-sans text-lg lg:text-2xl font-semibold text-gray-900">
               שמלות פופולריות
             </h2>
           </div>
@@ -139,8 +139,8 @@ export default function Reports() {
         {/* Returning Customers */}
         <Card className="p-4 lg:p-8 lg:col-span-2" hover={false}>
           <div className="flex items-center gap-2 lg:gap-3 mb-4 lg:mb-6">
-            <span className="text-gold-500 text-lg lg:text-xl">✦</span>
-            <h2 className="font-serif text-lg lg:text-2xl font-semibold text-champagne-800">
+            <span className="text-gray-600 text-lg lg:text-xl">✦</span>
+            <h2 className="font-sans text-lg lg:text-2xl font-semibold text-gray-900">
               לקוחות חוזרים
             </h2>
           </div>

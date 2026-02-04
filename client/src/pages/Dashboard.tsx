@@ -22,7 +22,7 @@ export default function Dashboard() {
   if (statsLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-gold-400 text-4xl animate-pulse">◈</div>
+        <div className="text-gray-500 text-4xl animate-pulse">◈</div>
       </div>
     );
   }
@@ -64,10 +64,10 @@ export default function Dashboard() {
     <div className="animate-slide-up pb-4">
       {/* Header */}
       <div className="mb-6 lg:mb-10">
-        <h1 className="font-serif text-2xl lg:text-4xl font-semibold text-champagne-800 mb-1 lg:mb-2">
+        <h1 className="font-sans text-2xl lg:text-4xl font-semibold text-gray-900 mb-1 lg:mb-2">
           דשבורד
         </h1>
-        <p className="text-champagne-700 text-sm lg:text-base">סקירה כללית של הסטודיו</p>
+        <p className="text-gray-600 text-sm lg:text-base">סקירה כללית של הסטודיו</p>
         <div className="gold-accent mt-3 lg:mt-4 w-16 lg:w-20"></div>
       </div>
 
@@ -77,31 +77,31 @@ export default function Dashboard() {
           title="סה״כ שמלות"
           value={stats?.totalDresses || 0}
           icon="❖"
-          color="gold"
+          color="default"
         />
         <StatCard
           title="שמלות פנויות"
           value={stats?.availableDresses || 0}
           icon="✓"
-          color="emerald"
+          color="success"
         />
         <StatCard
           title="השכרות פעילות"
           value={stats?.activeRentals || 0}
           icon="◆"
-          color="sky"
+          color="info"
         />
         <StatCard
           title="פגישות היום"
           value={stats?.todayAppointments || 0}
           icon="▣"
-          color="rose"
+          color="danger"
         />
         <StatCard
           title="הכנסות החודש"
           value={formatCurrency(stats?.monthlyRevenue || 0)}
           icon="◈"
-          color="amber"
+          color="warning"
         />
       </div>
 
@@ -109,38 +109,38 @@ export default function Dashboard() {
         {/* Today's Appointments */}
         <Card className="p-4 lg:p-8" hover={false}>
           <div className="flex items-center gap-2 lg:gap-3 mb-4 lg:mb-6">
-            <span className="text-gold-500 text-lg lg:text-xl">▣</span>
-            <h2 className="font-serif text-lg lg:text-2xl font-semibold text-champagne-800">
+            <span className="text-gray-600 text-lg lg:text-xl">▣</span>
+            <h2 className="font-sans text-lg lg:text-2xl font-semibold text-gray-900">
               פגישות היום
             </h2>
           </div>
           {appointmentsLoading ? (
             <div className="text-center py-8">
-              <div className="text-gold-400 animate-pulse">◈</div>
+              <div className="text-gray-500 animate-pulse">◈</div>
             </div>
           ) : todayAppointments.length === 0 ? (
-            <div className="text-center py-8 text-champagne-600 text-sm">
+            <div className="text-center py-8 text-gray-500 text-sm">
               אין פגישות היום
             </div>
           ) : (
             <div className="space-y-3">
               {todayAppointments.map((apt: Appointment) => (
-                <div key={apt.id} className="p-3 bg-gradient-to-l from-champagne-50 to-transparent rounded-lg border border-champagne-100">
+                <div key={apt.id} className="p-3 bg-gradient-to-l from-gray-50 to-transparent rounded-lg border border-gray-100">
                   <div className="flex justify-between items-start">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-gold-600 bg-gold-50 px-2 py-0.5 rounded-full">
+                        <span className="text-xs font-medium text-gray-700 bg-gray-100 px-2 py-0.5 rounded-full">
                           {getTypeLabel(apt.type)}
                         </span>
                         {apt.time && (
-                          <span className="text-xs text-champagne-600">{apt.time}</span>
+                          <span className="text-xs text-gray-500">{apt.time}</span>
                         )}
                       </div>
-                      <p className="text-sm font-medium text-champagne-800 mt-1">
+                      <p className="text-sm font-medium text-gray-900 mt-1">
                         {apt.customer_name || 'ללא לקוח'}
                       </p>
                       {apt.dress_name && (
-                        <p className="text-xs text-champagne-600">{apt.dress_name}</p>
+                        <p className="text-xs text-gray-500">{apt.dress_name}</p>
                       )}
                     </div>
                     {apt.customer_phone && (
@@ -165,29 +165,29 @@ export default function Dashboard() {
         {/* Upcoming Returns */}
         <Card className="p-4 lg:p-8" hover={false}>
           <div className="flex items-center gap-2 lg:gap-3 mb-4 lg:mb-6">
-            <span className="text-gold-500 text-lg lg:text-xl">◇</span>
-            <h2 className="font-serif text-lg lg:text-2xl font-semibold text-champagne-800">
+            <span className="text-gray-600 text-lg lg:text-xl">◇</span>
+            <h2 className="font-sans text-lg lg:text-2xl font-semibold text-gray-900">
               החזרות קרובות
             </h2>
           </div>
-          <p className="text-champagne-600 text-xs mb-4">7 ימים קרובים</p>
+          <p className="text-gray-500 text-xs mb-4">7 ימים קרובים</p>
           {returnsLoading ? (
             <div className="text-center py-8">
-              <div className="text-gold-400 animate-pulse">◈</div>
+              <div className="text-gray-500 animate-pulse">◈</div>
             </div>
           ) : upcomingReturns.length === 0 ? (
-            <div className="text-center py-8 text-champagne-600 text-sm">
+            <div className="text-center py-8 text-gray-500 text-sm">
               אין החזרות קרובות
             </div>
           ) : (
             <div className="space-y-3">
               {upcomingReturns.slice(0, 5).map((rental: Rental) => (
-                <div key={rental.id} className="p-3 bg-gradient-to-l from-champagne-50 to-transparent rounded-lg border border-champagne-100">
+                <div key={rental.id} className="p-3 bg-gradient-to-l from-gray-50 to-transparent rounded-lg border border-gray-100">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-sm font-medium text-champagne-800">{rental.dress_name}</p>
-                      <p className="text-xs text-champagne-600">{rental.customer_name}</p>
-                      <p className="text-xs text-gold-600 mt-1">{formatDate(rental.end_date)}</p>
+                      <p className="text-sm font-medium text-gray-900">{rental.dress_name}</p>
+                      <p className="text-xs text-gray-500">{rental.customer_name}</p>
+                      <p className="text-xs text-gray-700 mt-1">{formatDate(rental.end_date)}</p>
                     </div>
                     {rental.customer_phone && (
                       <button

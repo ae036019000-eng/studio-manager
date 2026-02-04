@@ -239,7 +239,7 @@ export default function Rentals() {
       key: 'total_price',
       header: 'מחיר',
       render: (r: Rental) => (
-        <span className="font-semibold text-gold-600">{formatCurrency(r.total_price)}</span>
+        <span className="font-semibold text-gray-700">{formatCurrency(r.total_price)}</span>
       ),
     },
     {
@@ -286,7 +286,7 @@ export default function Rentals() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-gold-400 text-4xl animate-pulse">◈</div>
+        <div className="text-gray-500 text-4xl animate-pulse">◈</div>
       </div>
     );
   }
@@ -296,10 +296,10 @@ export default function Rentals() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6 lg:mb-10">
         <div>
-          <h1 className="font-serif text-2xl lg:text-4xl font-semibold text-champagne-800 mb-1 lg:mb-2">
+          <h1 className="font-sans text-2xl lg:text-4xl font-semibold text-gray-900 mb-1 lg:mb-2">
             השכרות
           </h1>
-          <p className="text-champagne-700 text-sm lg:text-base">ניהול השכרות השמלות</p>
+          <p className="text-gray-600 text-sm lg:text-base">ניהול השכרות השמלות</p>
           <div className="gold-accent mt-3 lg:mt-4 w-12 lg:w-16"></div>
         </div>
         <Button onClick={() => openModal()} className="w-full sm:w-auto">
@@ -320,24 +320,24 @@ export default function Rentals() {
       <div className="lg:hidden space-y-3">
         {filteredRentals.length === 0 ? (
           <Card className="p-8 text-center">
-            <div className="text-champagne-300 text-4xl mb-4">◆</div>
-            <p className="text-champagne-700">אין השכרות להצגה</p>
+            <div className="text-gray-200 text-4xl mb-4">◆</div>
+            <p className="text-gray-600">אין השכרות להצגה</p>
           </Card>
         ) : (
           filteredRentals.map((rental: Rental) => (
             <Card key={rental.id} className="p-4">
               <div className="flex justify-between items-start mb-2">
                 <div>
-                  <h3 className="font-serif text-base font-semibold text-champagne-800">{rental.dress_name}</h3>
-                  <p className="text-sm text-champagne-600">{rental.customer_name}</p>
+                  <h3 className="font-sans text-base font-semibold text-gray-900">{rental.dress_name}</h3>
+                  <p className="text-sm text-gray-500">{rental.customer_name}</p>
                 </div>
                 {getStatusBadge(rental.status)}
               </div>
-              <div className="flex justify-between items-center text-sm text-champagne-600 mb-3">
+              <div className="flex justify-between items-center text-sm text-gray-500 mb-3">
                 <span>{formatDate(rental.start_date)} - {formatDate(rental.end_date)}</span>
-                <span className="font-semibold text-gold-600">{formatCurrency(rental.total_price)}</span>
+                <span className="font-semibold text-gray-700">{formatCurrency(rental.total_price)}</span>
               </div>
-              <div className="flex gap-2 pt-3 border-t border-champagne-100">
+              <div className="flex gap-2 pt-3 border-t border-gray-100">
                 <Button
                   size="sm"
                   variant="primary"
@@ -459,7 +459,7 @@ export default function Rentals() {
             placeholder="הערות נוספות..."
           />
 
-          <div className="flex justify-end gap-4 pt-6 border-t border-champagne-100">
+          <div className="flex justify-end gap-4 pt-6 border-t border-gray-100">
             <Button type="button" variant="secondary" onClick={closeModal}>
               ביטול
             </Button>
@@ -477,19 +477,19 @@ export default function Rentals() {
         title="רישום תשלום"
       >
         <form onSubmit={handlePaymentSubmit} className="space-y-6">
-          <div className="bg-gradient-to-br from-gold-50 to-champagne-50 p-6 rounded-xl border border-champagne-200">
+          <div className="bg-gradient-to-br from-gray-100 to-gray-50 p-6 rounded-xl border border-gray-200">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-champagne-700">שמלה:</span>
-                <p className="font-medium text-champagne-800">{selectedRental?.dress_name}</p>
+                <span className="text-gray-600">שמלה:</span>
+                <p className="font-medium text-gray-900">{selectedRental?.dress_name}</p>
               </div>
               <div>
-                <span className="text-champagne-700">לקוח/ה:</span>
-                <p className="font-medium text-champagne-800">{selectedRental?.customer_name}</p>
+                <span className="text-gray-600">לקוח/ה:</span>
+                <p className="font-medium text-gray-900">{selectedRental?.customer_name}</p>
               </div>
               <div className="col-span-2">
-                <span className="text-champagne-700">סה״כ לתשלום:</span>
-                <p className="font-serif text-2xl font-bold text-gold-600 mt-1">
+                <span className="text-gray-600">סה״כ לתשלום:</span>
+                <p className="font-sans text-2xl font-bold text-gray-700 mt-1">
                   {selectedRental && formatCurrency(selectedRental.total_price)}
                 </p>
               </div>
@@ -525,7 +525,7 @@ export default function Rentals() {
             ]}
           />
 
-          <div className="flex justify-end gap-4 pt-6 border-t border-champagne-100">
+          <div className="flex justify-end gap-4 pt-6 border-t border-gray-100">
             <Button type="button" variant="secondary" onClick={() => setIsPaymentModalOpen(false)}>
               ביטול
             </Button>
