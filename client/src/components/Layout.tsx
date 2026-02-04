@@ -95,13 +95,6 @@ export default function Layout({ children }: LayoutProps) {
           })}
         </nav>
 
-        {/* Footer decoration */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 hidden lg:block">
-          <div className="gold-accent"></div>
-          <p className="text-center text-champagne-600 text-xs mt-4 tracking-wider">
-            © 2024 Rachel
-          </p>
-        </div>
       </aside>
 
       {/* Main content */}
