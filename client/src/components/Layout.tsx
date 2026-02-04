@@ -37,7 +37,9 @@ export default function Layout({ children }: LayoutProps) {
           </svg>
         </button>
         {/* Large centered logo */}
-        <img src="/logo.jpg" alt="Rachel" className="h-32 object-contain" />
+        <Link to="/">
+          <img src="/logo.jpg" alt="Rachel" className="h-32 object-contain" />
+        </Link>
       </div>
 
       {/* Menu Overlay */}

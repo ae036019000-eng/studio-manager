@@ -165,6 +165,15 @@ export default function Calendar() {
     return labels[type] || type;
   };
 
+  const getDisplayName = (apt: Appointment) => {
+    if (apt.customer_name) return apt.customer_name;
+    if (apt.notes) {
+      const match = apt.notes.match(/\[לקוחה מזדמנת: (.+?)\]/);
+      if (match) return match[1];
+    }
+    return 'ללא לקוח';
+  };
+
   const sendWhatsAppReminder = (appointment: Appointment) => {
     if (!appointment.customer_phone) {
       alert('אין מספר טלפון ללקוח/ה');
@@ -292,7 +301,7 @@ export default function Calendar() {
                   <div key={apt.id} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
                     <div>
                       <span className="text-xs text-gray-400 ml-2">{getTypeLabel(apt.type)}</span>
-                      <span className="text-sm text-gray-900">{apt.customer_name || 'ללא לקוח'}</span>
+                      <span className="text-sm text-gray-900">{getDisplayName(apt)}</span>
                       {apt.time && <span className="text-xs text-gray-400 mr-2">{apt.time}</span>}
                     </div>
                     {apt.customer_phone && (
@@ -322,7 +331,7 @@ export default function Calendar() {
                   <div key={apt.id} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
                     <div>
                       <span className="text-xs text-gray-400 ml-2">{getTypeLabel(apt.type)}</span>
-                      <span className="text-sm text-gray-900">{apt.customer_name || 'ללא לקוח'}</span>
+                      <span className="text-sm text-gray-900">{getDisplayName(apt)}</span>
                     </div>
                     {apt.customer_phone && (
                       <Button

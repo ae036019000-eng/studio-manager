@@ -178,6 +178,15 @@ export default function Dashboard() {
     return labels[type] || type;
   };
 
+  const getDisplayName = (apt: Appointment) => {
+    if (apt.customer_name) return apt.customer_name;
+    if (apt.notes) {
+      const match = apt.notes.match(/\[לקוחה מזדמנת: (.+?)\]/);
+      if (match) return match[1];
+    }
+    return 'ללא לקוח';
+  };
+
   const sendReturnReminder = (rental: Rental) => {
     if (!rental.customer_phone) return;
     const date = formatDate(rental.end_date);
@@ -269,7 +278,7 @@ export default function Dashboard() {
                         )}
                       </div>
                       <p className="text-sm font-medium text-gray-900 mt-1">
-                        {apt.customer_name || 'ללא לקוח'}
+                        {getDisplayName(apt)}
                       </p>
                       {apt.dress_name && (
                         <p className="text-xs text-gray-500">{apt.dress_name}</p>
