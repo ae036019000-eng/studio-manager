@@ -54,9 +54,9 @@ export default function Layout({ children }: LayoutProps) {
         lg:flex-shrink-0
       `}>
         {/* Logo/Brand */}
-        <div className="p-5 lg:p-6 border-b border-gray-100 mt-14 lg:mt-0">
-          <img src="/logo.jpg" alt="Rachel" className="h-10 lg:h-12 object-contain" />
-          <p className="text-gray-500 text-xs mt-2 tracking-wide">
+        <div className="p-6 lg:p-8 border-b border-gray-100 mt-14 lg:mt-0 flex flex-col items-center">
+          <img src="/logo.jpg" alt="Rachel" className="h-20 lg:h-28 object-contain" />
+          <p className="text-gray-400 text-xs mt-3 tracking-widest uppercase">
             השכרת שמלות
           </p>
         </div>
