@@ -35,6 +35,7 @@ export default function Calendar() {
   });
   const [isWalkIn, setIsWalkIn] = useState(false);
   const [walkInName, setWalkInName] = useState('');
+  const [walkInPhone, setWalkInPhone] = useState('');
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ['calendar-events'],
@@ -109,6 +110,7 @@ export default function Calendar() {
     setNewCustomerData({ name: '', phone: '' });
     setIsWalkIn(false);
     setWalkInName('');
+    setWalkInPhone('');
     setIsModalOpen(true);
   };
 
@@ -117,13 +119,15 @@ export default function Calendar() {
     setIsNewCustomerMode(false);
     setIsWalkIn(false);
     setWalkInName('');
+    setWalkInPhone('');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     let notes = formData.notes;
-    if (isWalkIn && walkInName) {
-      notes = `[לקוחה מזדמנת: ${walkInName}]${notes ? '\n' + notes : ''}`;
+    if (isWalkIn) {
+      const walkInInfo = `[לקוחה מזדמנת: ${walkInName || 'ללא שם'}${walkInPhone ? ' | ' + walkInPhone : ''}]`;
+      notes = `${walkInInfo}${notes ? '\n' + notes : ''}`;
     }
     createMutation.mutate({
       ...formData,
@@ -168,14 +172,24 @@ export default function Calendar() {
   const getDisplayName = (apt: Appointment) => {
     if (apt.customer_name) return apt.customer_name;
     if (apt.notes) {
-      const match = apt.notes.match(/\[לקוחה מזדמנת: (.+?)\]/);
-      if (match) return match[1];
+      const match = apt.notes.match(/\[לקוחה מזדמנת: ([^|\]]+)/);
+      if (match) return match[1].trim();
     }
     return 'ללא לקוח';
   };
 
+  const getWalkInPhone = (apt: Appointment) => {
+    if (apt.customer_phone) return apt.customer_phone;
+    if (apt.notes) {
+      const match = apt.notes.match(/\[לקוחה מזדמנת: .+? \| (.+?)\]/);
+      if (match) return match[1].trim();
+    }
+    return null;
+  };
+
   const sendWhatsAppReminder = (appointment: Appointment) => {
-    if (!appointment.customer_phone) {
+    const phone = appointment.customer_phone || getWalkInPhone(appointment);
+    if (!phone) {
       alert('אין מספר טלפון ללקוח/ה');
       return;
     }
@@ -209,7 +223,7 @@ export default function Calendar() {
         message = `שלום ${appointment.customer_name || ''},\nתזכורת לפגישה מחר (${date}).\n\nרחל - השכרת שמלות`;
     }
 
-    const link = whatsappHelper.getLink(appointment.customer_phone, message);
+    const link = whatsappHelper.getLink(phone, message);
     window.open(link, '_blank');
     markReminderSentMutation.mutate(appointment.id);
   };
@@ -304,9 +318,9 @@ export default function Calendar() {
                       <span className="text-sm text-gray-900">{getDisplayName(apt)}</span>
                       {apt.time && <span className="text-xs text-gray-400 mr-2">{apt.time}</span>}
                     </div>
-                    {apt.customer_phone && (
+                    {(apt.customer_phone || getWalkInPhone(apt)) && (
                       <a
-                        href={whatsappHelper.getLink(apt.customer_phone, `שלום ${apt.customer_name}, `)}
+                        href={whatsappHelper.getLink(apt.customer_phone || getWalkInPhone(apt) || '', `שלום ${getDisplayName(apt)}, `)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-gray-400 hover:text-green-600 transition-colors"
@@ -333,7 +347,7 @@ export default function Calendar() {
                       <span className="text-xs text-gray-400 ml-2">{getTypeLabel(apt.type)}</span>
                       <span className="text-sm text-gray-900">{getDisplayName(apt)}</span>
                     </div>
-                    {apt.customer_phone && (
+                    {(apt.customer_phone || getWalkInPhone(apt)) && (
                       <Button
                         size="sm"
                         variant="secondary"
@@ -412,14 +426,22 @@ export default function Calendar() {
             />
           </div>
 
-          {/* Walk-in Name */}
+          {/* Walk-in Details */}
           {isWalkIn && (
-            <Input
-              label="שם הלקוחה המזדמנת"
-              value={walkInName}
-              onChange={(e) => setWalkInName(e.target.value)}
-              placeholder="שם לזיהוי"
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="שם"
+                value={walkInName}
+                onChange={(e) => setWalkInName(e.target.value)}
+                placeholder="שם לזיהוי"
+              />
+              <Input
+                label="טלפון"
+                value={walkInPhone}
+                onChange={(e) => setWalkInPhone(e.target.value)}
+                placeholder="050-0000000"
+              />
+            </div>
           )}
 
           {/* New Customer Form */}

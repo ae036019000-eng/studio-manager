@@ -20,6 +20,7 @@ export default function Dashboard() {
   const [isNewCustomerMode, setIsNewCustomerMode] = useState(false);
   const [isWalkIn, setIsWalkIn] = useState(false);
   const [walkInName, setWalkInName] = useState('');
+  const [walkInPhone, setWalkInPhone] = useState('');
   const [formData, setFormData] = useState({
     customer_id: '',
     dress_id: '',
@@ -96,6 +97,7 @@ export default function Dashboard() {
     setNewCustomerData({ name: '', phone: '' });
     setIsWalkIn(false);
     setWalkInName('');
+    setWalkInPhone('');
     setIsModalOpen(true);
   };
 
@@ -104,13 +106,15 @@ export default function Dashboard() {
     setIsNewCustomerMode(false);
     setIsWalkIn(false);
     setWalkInName('');
+    setWalkInPhone('');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     let notes = formData.notes;
-    if (isWalkIn && walkInName) {
-      notes = `[לקוחה מזדמנת: ${walkInName}]${notes ? '\n' + notes : ''}`;
+    if (isWalkIn) {
+      const walkInInfo = `[לקוחה מזדמנת: ${walkInName || 'ללא שם'}${walkInPhone ? ' | ' + walkInPhone : ''}]`;
+      notes = `${walkInInfo}${notes ? '\n' + notes : ''}`;
     }
     createAppointmentMutation.mutate({
       ...formData,
@@ -186,10 +190,19 @@ export default function Dashboard() {
   const getDisplayName = (apt: Appointment) => {
     if (apt.customer_name) return apt.customer_name;
     if (apt.notes) {
-      const match = apt.notes.match(/\[לקוחה מזדמנת: (.+?)\]/);
-      if (match) return match[1];
+      const match = apt.notes.match(/\[לקוחה מזדמנת: ([^|\]]+)/);
+      if (match) return match[1].trim();
     }
     return 'ללא לקוח';
+  };
+
+  const getWalkInPhone = (apt: Appointment) => {
+    if (apt.customer_phone) return apt.customer_phone;
+    if (apt.notes) {
+      const match = apt.notes.match(/\[לקוחה מזדמנת: .+? \| (.+?)\]/);
+      if (match) return match[1].trim();
+    }
+    return null;
   };
 
   const sendReturnReminder = (rental: Rental) => {
@@ -205,7 +218,7 @@ export default function Dashboard() {
   };
 
   const sendAppointmentReminder = (apt: Appointment) => {
-    const phone = apt.customer_phone;
+    const phone = apt.customer_phone || getWalkInPhone(apt);
     if (!phone) return;
 
     const date = new Date(apt.date).toLocaleDateString('he-IL');
@@ -294,7 +307,7 @@ export default function Dashboard() {
                   <p className="text-sm font-medium text-gray-900">{getDisplayName(apt)}</p>
                   {apt.time && <p className="text-xs text-gray-500">{apt.time}</p>}
                 </div>
-                {apt.customer_phone && (
+                {(apt.customer_phone || getWalkInPhone(apt)) && (
                   <button
                     onClick={() => sendAppointmentReminder(apt)}
                     className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
@@ -453,12 +466,20 @@ export default function Dashboard() {
           />
 
           {isWalkIn && (
-            <Input
-              label="שם הלקוחה המזדמנת"
-              value={walkInName}
-              onChange={(e) => setWalkInName(e.target.value)}
-              placeholder="שם לזיהוי"
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="שם"
+                value={walkInName}
+                onChange={(e) => setWalkInName(e.target.value)}
+                placeholder="שם לזיהוי"
+              />
+              <Input
+                label="טלפון"
+                value={walkInPhone}
+                onChange={(e) => setWalkInPhone(e.target.value)}
+                placeholder="050-0000000"
+              />
+            </div>
           )}
 
           {isNewCustomerMode && (
