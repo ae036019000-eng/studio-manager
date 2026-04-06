@@ -1,0 +1,78 @@
+Poker Hand #HD3000000001: Tournament #555000111, $25.00+$2.50 NLH (Sunday Special Hyper), Level I (150/300) - 2024/03/22 14:00:00
+Table '555000111 1' 9-max Seat #4 is the button
+Seat 1: Player1 (50000 in chips)
+Seat 2: Player2 (50000 in chips)
+Seat 3: Player3 (50000 in chips)
+Seat 4: Player4 (50000 in chips)
+Seat 5: Player5 (50000 in chips)
+Seat 6: Player6 (50000 in chips)
+Seat 7: Hero (50000 in chips)
+Seat 8: Player8 (50000 in chips)
+Seat 9: Player9 (50000 in chips)
+Player5: posts small blind 150
+Player6: posts big blind 300
+*** HOLE CARDS ***
+Dealt to Hero [Ac Ad]
+Player7: folds
+Player8: folds
+Player9: folds
+Player1: raises 600 to 900
+Player2: folds
+Player3: folds
+Player4: folds
+Player5: folds
+Player6: calls 600
+Hero: raises 2700 to 3600
+Player1: calls 2700
+Player6: folds
+*** FLOP *** [Ah 5c 9d]
+Hero: bets 4000
+Player1: raises 10000 to 14000
+Hero: raises 32400 and is all-in
+Player1: calls 32400 and is all-in
+*** SHOW DOWN ***
+Hero: shows [Ac Ad] (three of a kind, Aces)
+Player1: shows [9h 9c] (three of a kind, Nines)
+Hero collected 91800 from pot
+Hero wins $12.50 for eliminating Player1
+*** SUMMARY ***
+Total pot 91800 | Rake 0
+Board [Ah 5c 9d]
+Seat 1: Player1 showed [9h 9c] and lost
+Seat 7: Hero showed [Ac Ad] and won (91800)
+
+
+Poker Hand #HD3000000002: Tournament #555000111, $25.00+$2.50 NLH (Sunday Special Hyper), Level II (200/400) - 2024/03/22 14:15:30
+Table '555000111 1' 8-max Seat #7 is the button
+Seat 2: Player2 (50000 in chips)
+Seat 3: Player3 (50000 in chips)
+Seat 4: Player4 (50000 in chips)
+Seat 5: Player5 (50000 in chips)
+Seat 6: Player6 (50000 in chips)
+Seat 7: Hero (91800 in chips)
+Seat 8: Player8 (50000 in chips)
+Seat 9: Player9 (50000 in chips)
+Player8: posts small blind 200
+Player9: posts big blind 400
+*** HOLE CARDS ***
+Dealt to Hero [Kh Qh]
+Player2: folds
+Player3: folds
+Player4: raises 800 to 1200
+Player5: folds
+Player6: folds
+Hero: calls 1200
+Player8: folds
+Player9: folds
+*** FLOP *** [Ks 7h 3d]
+Player4: bets 1600
+Hero: calls 1600
+*** TURN *** [Ks 7h 3d] [Qd]
+Player4: checks
+Hero: bets 4000
+Player4: folds
+Hero: collected 8800 from pot
+*** SUMMARY ***
+Total pot 8800 | Rake 0
+Board [Ks 7h 3d Qd]
+Seat 7: Hero collected (8800)
