@@ -1,177 +1,165 @@
 """
 GG Poker Hand History Parser
-Reads .txt hand history files and extracts tournament data.
+תומך בפורמט האמיתי:
+  Poker Hand #TM...: Tournament #272532852,
+  Bounty Hunters Deepstack Turbo $3.20 Hold'em No Limit -
+  Level27(10,000/20,000(3,000)) - 2026/03/26 22:30:14
 """
 
 import re
-import os
 from datetime import datetime
 from pathlib import Path
 
 
-# ── Regex patterns for GG Poker hand history format ──────────────────────────
+# ── Regex ─────────────────────────────────────────────────────────────────────
 
-# Tournament ID — כמה פורמטים: #T123, #123456, Tournament #HD...
-RE_TOURNAMENT_ID = re.compile(r"Tournament\s+#(\w+)", re.IGNORECASE)
+# Tournament ID
+RE_TOURNAMENT_ID = re.compile(r"Tournament\s+#(\d+)", re.IGNORECASE)
 
-# Buy-in — $5+$0.50 / $5.00+$0.50 / 5+0.5 / ($5+$0.50)
-RE_BUYIN = re.compile(
-    r"\$?(\d+(?:\.\d+)?)\s*\+\s*\$?(\d+(?:\.\d+)?)",
+# buy-in — פורמט GG האמיתי: "$3.20 Hold'em" או "$3.20 No Limit" וכו'
+RE_BUYIN_TITLE = re.compile(
+    r"\$(\d+(?:\.\d+)?)\s+(?:Hold'?em|No\s*Limit|NLH|PLO|Omaha|Stud)",
     re.IGNORECASE,
 )
-# Buy-in without rake, e.g. "Buy-in: $10.00" or "Total Buy-In: $10.50"
-RE_BUYIN_SINGLE = re.compile(
-    r"(?:buy.?in|total buy.?in)[:\s]+\$?(\d+(?:\.\d+)?)",
+# פורמט ישן עם ראק: $5.00+$0.50
+RE_BUYIN_PLUS = re.compile(
+    r"\$(\d+(?:\.\d+)?)\s*\+\s*\$(\d+(?:\.\d+)?)",
     re.IGNORECASE,
 )
 
-# Date formats: 2024/03/15 18:00:12 or 2024-03-15 18:00:12
+# תאריך: 2026/03/26 22:30:14
 RE_DATE = re.compile(r"(\d{4})[/-](\d{2})[/-](\d{2})\s+(\d{2}):(\d{2}):(\d{2})")
 
+# שם טורניר: הטקסט שאחרי הפסיק ולפני סכום הכניסה
 RE_TITLE = re.compile(
-    r"Tournament\s+#\w+,\s*(?:\$?[\d.]+\+\$?[\d.]+\s+)?(.+?)(?:,|\s+-\s+|\s+Level\s+)",
+    r"Tournament\s+#\d+,\s*(.+?)\s+\$[\d.]+\s+(?:Hold'?em|No\s*Limit|NLH|PLO|Omaha)",
     re.IGNORECASE,
 )
 
-# Bounty — כל הגרסאות הידועות של GG Poker
-RE_BOUNTY = re.compile(
-    r"Hero\s+(?:wins?|collected?)\s+(?:the\s+)?\$(\d+(?:\.\d+)?)"
-    r"(?:\s+(?:bounty|from bounty|for (?:eliminating|knocking out)))?",
-    re.IGNORECASE,
-)
-RE_BOUNTY_ALT = re.compile(
-    r"Hero\s+wins?\s+bounty\s+of\s+\$(\d+(?:\.\d+)?)", re.IGNORECASE
-)
-# "Hero: wins bounty $X"
-RE_BOUNTY_ALT2 = re.compile(
-    r"Hero[:\s]+wins?\s+\$?(\d+(?:\.\d+)?)\s+bounty", re.IGNORECASE
-)
+# שם קובץ: GG20260326-1641... או HH20231015...
+RE_FNAME_DATE = re.compile(r"(?:GG|HH)(\d{4})(\d{2})(\d{2})")
 
-# Filename patterns: "HH20231015 T123456789 No Limit Hold'em $5+$0.50.txt"
-RE_FNAME_DATE = re.compile(r"HH(\d{4})(\d{2})(\d{2})")
-RE_FNAME_TID = re.compile(r"\bT(\d+)\b")
-RE_FNAME_BUYIN = re.compile(r"\$(\d+(?:\.\d+)?)\+\$(\d+(?:\.\d+)?)")
-
-# ─────────────────────────────────────────────────────────────────────────────
+# Bounty — כל הגרסאות
+RE_BOUNTY_PATTERNS = [
+    re.compile(r"Hero\s+wins?\s+\$(\d+(?:\.\d+)?)\s+bounty",                     re.IGNORECASE),
+    re.compile(r"Hero\s+wins?\s+bounty\s+of\s+\$(\d+(?:\.\d+)?)",                re.IGNORECASE),
+    re.compile(r"Hero\s+collected?\s+\$(\d+(?:\.\d+)?)\s+from\s+bounty",         re.IGNORECASE),
+    re.compile(r"Hero\s+wins?\s+\$(\d+(?:\.\d+)?)\s+for\s+eliminating",          re.IGNORECASE),
+    re.compile(r"Hero\s+wins?\s+\$(\d+(?:\.\d+)?)\s+for\s+knocking\s+out",       re.IGNORECASE),
+    re.compile(r"Hero\s+wins?\s+the\s+\$(\d+(?:\.\d+)?)\s+bounty",               re.IGNORECASE),
+    re.compile(r"Hero:\s+wins?\s+\$(\d+(?:\.\d+)?)\s+bounty",                    re.IGNORECASE),
+]
 
 
-def _parse_date(match: re.Match) -> datetime | None:
+# ── עזר ──────────────────────────────────────────────────────────────────────
+
+def _parse_date(m: re.Match) -> datetime | None:
     try:
-        y, mo, d, h, mi, s = [int(x) for x in match.groups()]
-        return datetime(y, mo, d, h, mi, s)
+        return datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)),
+                        int(m.group(4)), int(m.group(5)), int(m.group(6)))
     except Exception:
         return None
 
 
-def _extract_buyin_from_text(text: str) -> tuple[float, float]:
-    """Return (buy_in, rake). Tries $X+$Y first, then single buy-in line."""
-    # נסה $X+$Y (buy-in + rake)
-    for m in RE_BUYIN.finditer(text):
+def _extract_buyin(header: str) -> tuple[float, float]:
+    """
+    מחלץ (buy_in, rake) מהשורה הראשונה של היד.
+    מנסה קודם $X+$Y, אחר כך $X Hold'em/No Limit.
+    """
+    # פורמט $X+$Y
+    m = RE_BUYIN_PLUS.search(header)
+    if m:
         bi, rk = float(m.group(1)), float(m.group(2))
-        # סנן התאמות לא סבירות (כגון chip counts כמו 1000+200)
         if bi <= 10000:
             return bi, rk
-    # נסה "Buy-in: $X" בלבד
-    m = RE_BUYIN_SINGLE.search(text)
+
+    # פורמט GG האמיתי: $3.20 Hold'em
+    m = RE_BUYIN_TITLE.search(header)
     if m:
         return float(m.group(1)), 0.0
+
     return 0.0, 0.0
 
 
-def _extract_bounties_from_hand(hand: str) -> float:
-    """Sum all bounty amounts won by Hero in a single hand block."""
+def _extract_title(header: str) -> str:
+    m = RE_TITLE.search(header)
+    if m:
+        return m.group(1).strip()
+    # fallback — טקסט בין הפסיק הראשון לאחר Tournament# ל-Level
+    m2 = re.search(r"Tournament\s+#\d+,\s*(.+?)\s*[-–]\s*Level", header, re.IGNORECASE)
+    if m2:
+        return m2.group(1).strip()
+    return "Unknown"
+
+
+def _extract_bounties(hand: str) -> float:
     total = 0.0
-    for pattern in (RE_BOUNTY, RE_BOUNTY_ALT, RE_BOUNTY_ALT2):
-        for m in pattern.finditer(hand):
+    for pat in RE_BOUNTY_PATTERNS:
+        for m in pat.finditer(hand):
             total += float(m.group(1))
     return total
 
 
-def _parse_title(first_hand: str) -> str:
-    """Extract a human-readable tournament name from the hand header."""
-    m = RE_TITLE.search(first_hand)
-    if m:
-        return m.group(1).strip()
-    return "Unknown"
-
-
-def _info_from_filename(filename: str) -> dict:
-    """Best-effort extraction from the file name alone."""
-    info: dict = {}
-
+def _date_from_filename(filename: str) -> datetime | None:
     m = RE_FNAME_DATE.search(filename)
     if m:
         try:
-            info["date"] = datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+            return datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)))
         except Exception:
             pass
+    return None
 
-    m = RE_FNAME_TID.search(filename)
-    if m:
-        info["tournament_id"] = m.group(1)
 
-    m = RE_FNAME_BUYIN.search(filename)
-    if m:
-        info["buy_in"] = float(m.group(1))
-        info["rake"] = float(m.group(2))
-
-    return info
-
+# ── API ───────────────────────────────────────────────────────────────────────
 
 def parse_content(content: str, filename: str) -> dict | None:
     """
-    Parse GG Poker hand history from a string (in-memory, no disk access).
-
-    Returns a dict with keys:
-        tournament_id, filename, date, buy_in, rake, bounties, title, source_file
-    or None if not a recognisable tournament history.
+    מנתח תוכן קובץ היסטוריית ידיים של GG Poker מהזיכרון.
+    מחזיר dict או None אם הקובץ לא מזוהה כטורניר.
     """
-    info = _info_from_filename(filename)
-    info.setdefault("tournament_id", None)
-    info.setdefault("date", None)
-    info.setdefault("buy_in", 0.0)
-    info.setdefault("rake", 0.0)
-    info["bounties"]    = 0.0
-    info["title"]       = "Unknown"
-    info["filename"]    = filename
-    info["source_file"] = filename
-
-    if not content.strip():
+    content = content.strip()
+    if not content:
         return None
 
     hands = [h.strip() for h in re.split(r"\n{2,}", content) if h.strip()]
     if not hands:
         return None
 
-    first_hand = hands[0]
+    first = hands[0]
 
-    m = RE_TOURNAMENT_ID.search(first_hand)
-    if m:
-        info["tournament_id"] = m.group(1)
-    if not info["tournament_id"]:
+    # חובה — Tournament ID
+    m = RE_TOURNAMENT_ID.search(first)
+    if not m:
         return None
+    tournament_id = m.group(1)
 
-    m = RE_DATE.search(first_hand)
-    if m:
-        info["date"] = _parse_date(m)
+    # תאריך — מהיד הראשונה, אחרת משם הקובץ
+    date = None
+    dm = RE_DATE.search(first)
+    if dm:
+        date = _parse_date(dm)
+    if date is None:
+        date = _date_from_filename(filename)
 
-    bi, rk = _extract_buyin_from_text(first_hand)
-    if bi > 0:
-        info["buy_in"] = bi
-        info["rake"]   = rk
+    buy_in, rake = _extract_buyin(first)
+    title = _extract_title(first)
 
-    info["title"] = _parse_title(first_hand)
+    # bounties — סרוק כל הידיים
+    bounties = sum(_extract_bounties(h) for h in hands)
 
-    for hand in hands:
-        info["bounties"] += _extract_bounties_from_hand(hand)
-
-    return info
+    return {
+        "tournament_id": tournament_id,
+        "filename":      filename,
+        "title":         title,
+        "date":          date,
+        "buy_in":        buy_in,
+        "rake":          rake,
+        "bounties":      bounties,
+        "source_file":   filename,
+    }
 
 
 def parse_file(filepath: str | Path) -> dict | None:
-    """
-    Parse a single GG Poker hand history .txt file from disk.
-    """
     filepath = Path(filepath)
     try:
         raw = filepath.read_text(encoding="utf-8", errors="replace")
@@ -181,39 +169,26 @@ def parse_file(filepath: str | Path) -> dict | None:
 
 
 def parse_folder(folder: str | Path) -> list[dict]:
-    """
-    Parse all .txt files in *folder*.
-
-    Multiple files for the same tournament are merged (bounties summed,
-    earliest date kept).  Returns a list of tournament dicts sorted by date.
-    """
     folder = Path(folder)
     tournaments: dict[str, dict] = {}
 
-    txt_files = sorted(folder.glob("*.txt"))
-    if not txt_files:
-        return []
-
-    for filepath in txt_files:
+    for filepath in sorted(folder.glob("*.txt")):
         result = parse_file(filepath)
         if result is None:
             continue
-
         tid = result["tournament_id"]
         if tid not in tournaments:
             tournaments[tid] = result
         else:
-            # Merge: accumulate bounties, keep the earliest date
-            existing = tournaments[tid]
-            existing["bounties"] += result["bounties"]
+            tournaments[tid]["bounties"] += result["bounties"]
             if result["date"] and (
-                existing["date"] is None or result["date"] < existing["date"]
+                tournaments[tid]["date"] is None
+                or result["date"] < tournaments[tid]["date"]
             ):
-                existing["date"] = result["date"]
-            # If buy-in was unknown, take first non-zero value
-            if existing["buy_in"] == 0.0 and result["buy_in"] > 0.0:
-                existing["buy_in"] = result["buy_in"]
-                existing["rake"] = result["rake"]
+                tournaments[tid]["date"] = result["date"]
+            if tournaments[tid]["buy_in"] == 0.0 and result["buy_in"] > 0:
+                tournaments[tid]["buy_in"] = result["buy_in"]
+                tournaments[tid]["rake"]   = result["rake"]
 
     results = list(tournaments.values())
     results.sort(key=lambda r: r["date"] or datetime.min)
