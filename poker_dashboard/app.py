@@ -219,6 +219,37 @@ st.markdown(
 
     /* ── סרגל צד — נגיש יותר במובייל ── */
     [data-testid="stSidebarContent"] { padding: 1.5rem 1rem; }
+
+    /* ── אזור העלאת קבצים ── */
+    [data-testid="stFileUploader"] {
+        background: #161b22 !important;
+        border: 2px dashed #30363d !important;
+        border-radius: 14px !important;
+        padding: 8px !important;
+        transition: border-color .2s;
+    }
+    [data-testid="stFileUploader"]:hover,
+    [data-testid="stFileUploader"]:focus-within {
+        border-color: #58a6ff !important;
+    }
+    [data-testid="stFileUploaderDropzone"] {
+        background: transparent !important;
+        padding: 20px 12px !important;
+    }
+    [data-testid="stFileUploaderDropzoneInstructions"] {
+        color: #8b949e !important;
+        font-size: 0.9rem !important;
+    }
+    /* כפתור Browse בתוך ה-uploader */
+    [data-testid="stFileUploaderDropzone"] button {
+        background: #21262d !important;
+        color: #e6edf3 !important;
+        border: 1px solid #30363d !important;
+        border-radius: 8px !important;
+        font-size: 0.95rem !important;
+        min-height: 44px !important;
+        padding: 10px 20px !important;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -244,6 +275,19 @@ def scan_and_import() -> tuple[int, int]:
         elif outcome == "updated":
             updated_count += 1
     return new_count, updated_count
+
+
+def handle_uploaded_files(uploaded_files) -> tuple[int, int]:
+    """שמור קבצים שהועלו לתיקייה ועבד אותם."""
+    HAND_HISTORY_FOLDER.mkdir(parents=True, exist_ok=True)
+    saved = 0
+    for f in uploaded_files:
+        dest = HAND_HISTORY_FOLDER / f.name
+        dest.write_bytes(f.getvalue())
+        saved += 1
+    if saved == 0:
+        return 0, 0
+    return scan_and_import()
 
 
 def fmt_money(value: float, always_sign: bool = False) -> str:
@@ -379,6 +423,29 @@ if missing > 0:
     )
 elif stats["total_tournaments"] > 0:
     st.markdown('<span class="badge-ok">✓ כל התשלומים מעודכנים</span>', unsafe_allow_html=True)
+
+st.markdown("<hr class='divider'>", unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# העלאת קבצי GG Poker
+# ─────────────────────────────────────────────────────────────────────────────
+
+st.markdown('<div class="section-title">📂 העלאת היסטוריית ידיים</div>', unsafe_allow_html=True)
+
+uploaded = st.file_uploader(
+    "בחר קבצי GG Poker",
+    type=["txt"],
+    accept_multiple_files=True,
+    label_visibility="collapsed",
+    help="קבצי .txt מ-GG Poker — אפשר לבחור כמה קבצים ביחד",
+)
+
+if uploaded:
+    if st.button(f"📥  ייבא {len(uploaded)} קוב{'צים' if len(uploaded) != 1 else 'ץ'}"):
+        with st.spinner("שומר ומעבד…"):
+            new, upd = handle_uploaded_files(uploaded)
+        st.success(f"✅ הושלם — {new} טורנירים חדשים, {upd} עודכנו")
+        st.rerun()
 
 st.markdown("<hr class='divider'>", unsafe_allow_html=True)
 
