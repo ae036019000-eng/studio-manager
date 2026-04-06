@@ -22,6 +22,7 @@ st.set_page_config(
     page_icon="♠",
     layout="wide",
     initial_sidebar_state="collapsed",
+    menu_items={"Get Help": None, "Report a bug": None, "About": None},
 )
 
 # ── CSS מינימלי — רק צבעים ורקע, ללא HTML מורכב ─────────────────────────────
@@ -32,9 +33,10 @@ html, body, [data-testid="stAppViewContainer"] {
     color: #e6edf3;
     direction: rtl;
 }
-[data-testid="stHeader"]  { background: transparent; }
-[data-testid="stSidebar"] { background-color: #161b22; direction: rtl; }
-.block-container          { padding: 1.2rem 1rem 3rem 1rem !important; }
+[data-testid="stHeader"]       { background: transparent; }
+[data-testid="stSidebar"]      { display: none !important; }
+[data-testid="collapsedControl"]{ display: none !important; }
+.block-container               { padding: 1.2rem 1rem 3rem 1rem !important; }
 
 /* כרטיסי מדד */
 [data-testid="stMetric"] {
@@ -156,16 +158,7 @@ def fmt(v: float, sign: bool = False) -> str:
     return f"{s}${v:,.2f}"
 
 
-# ── סרגל צד ──────────────────────────────────────────────────────────────────
-
-with st.sidebar:
-    st.markdown("### ♠ פקדים")
-    if st.button("🔄 סרוק תיקייה"):
-        with st.spinner("סורק…"):
-            n, u = scan_and_import()
-        st.success(f"הושלם — {n} חדשים, {u} עודכנו")
-        st.rerun()
-    st.caption("להוסיף קבצים ישירות? השתמש בכפתור ההעלאה בדף הראשי.")
+# (סרגל צד הוסר — כל הפקדים בדף הראשי)
 
 if "scanned" not in st.session_state:
     scan_and_import()
