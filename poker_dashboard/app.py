@@ -50,14 +50,8 @@ html, body, [data-testid="stAppViewContainer"] {
     background: #161b22; border: 1px solid #21262d;
     border-radius: 12px; padding: 14px 10px !important; text-align: center;
 }
-[data-testid="stMetricLabel"] p {
-    color: #8b949e !important; font-size: 0.78rem !important;
-    font-weight: 600 !important;
-}
-[data-testid="stMetricValue"] {
-    font-size: 1.5rem !important; font-weight: 800 !important; direction: ltr;
-}
-[data-testid="stMetricDelta"] { justify-content: center; }
+[data-testid="stMetricLabel"] p { color: #8b949e !important; font-size: 0.78rem !important; font-weight: 600 !important; }
+[data-testid="stMetricValue"] { font-size: 1.5rem !important; font-weight: 800 !important; direction: ltr; }
 
 /* כפתורים — גדולים וידידותיים למגע */
 .stButton > button {
@@ -65,7 +59,6 @@ html, body, [data-testid="stAppViewContainer"] {
     border-radius: 10px !important; font-weight: 700 !important;
     min-height: 50px !important; width: 100% !important; font-size: 1rem !important;
 }
-.stButton > button:active { opacity: 0.82; }
 
 /* שדות קלט */
 .stTextInput > div > div > input, .stNumberInput > div > div > input {
@@ -75,25 +68,14 @@ html, body, [data-testid="stAppViewContainer"] {
 }
 
 /* אזור העלאת קבצים */
-[data-testid="stFileUploader"] {
-    background: #161b22 !important;
-    border: 2px dashed #30363d !important;
-    border-radius: 12px !important;
-}
-[data-testid="stFileUploaderDropzone"] button {
-    background: #21262d !important; color: #e6edf3 !important;
-    border: 1px solid #30363d !important; border-radius: 8px !important;
-    min-height: 44px !important;
-}
+[data-testid="stFileUploader"] { background: #161b22 !important; border: 2px dashed #30363d !important; border-radius: 12px !important; }
 
 /* טבלת נתונים */
 div[data-testid="stDataFrame"] { border-radius: 12px; overflow: hidden; }
 
 /* פס גלילה דק */
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
 
-/* מפריד */
 hr { border-color: #21262d !important; margin: 18px 0 !important; }
 </style>
 """, unsafe_allow_html=True)
@@ -332,7 +314,7 @@ else:
             showlegend=False,
         )
 
-        # config: ללא toolbar, responsive — מניע גלילה טבעית באייפון
+        # config: ללא toolbar, scrollZoom=False — מניע גלילה טבעית באייפון
         st.plotly_chart(
             fig,
             use_container_width=True,
@@ -389,7 +371,7 @@ st.subheader("🗂 היסטוריית טורנירים")
 if df.empty:
     st.info("לא נרשמו טורנירים עדיין.")
 else:
-    # שורת חיפוש + סינון
+    # שורת חיפוש + סינון ממתינים
     fc1, fc2 = st.columns([3, 1])
     with fc1:
         search = st.text_input(
@@ -398,7 +380,7 @@ else:
     with fc2:
         only_pending = st.checkbox("ממתינים", value=False)
 
-    # בניית DataFrame לתצוגה
+    # בניית DataFrame לתצוגה — עמודות לפי הסדר המבוקש
     disp = df[["date_dt", "title", "buy_in", "rake", "bounties", "cash_out", "net", "roi_pct"]].copy()
     disp.columns = ["תאריך", "טורניר", "Buy-in", "עמלה", "באונטי", "תשלום", "רווח/הפסד", "ROI%"]
 
@@ -412,7 +394,7 @@ else:
     )
     disp["ROI%"]       = disp["ROI%"].map(lambda x: f"{x:+.1f}%")
 
-    # פילטרים
+    # פילטרים — חיפוש טקסט וסינון ממתינים
     if search:
         disp = disp[disp["טורניר"].str.contains(search, case=False, na=False)]
     if only_pending:
