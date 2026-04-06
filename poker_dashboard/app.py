@@ -215,17 +215,16 @@ uploaded = st.file_uploader(
     label_visibility="visible",
 )
 
-# ייבוא אוטומטי — מעבד ברגע שיש קבצים חדשים
-uploaded_key = tuple(sorted(f.name for f in uploaded)) if uploaded else ()
-if uploaded and uploaded_key != st.session_state.get("last_upload_key"):
-    with st.spinner(f"מעבד {len(uploaded)} קבצים…"):
-        new, upd = handle_uploaded_files(uploaded)
-    st.session_state["last_upload_key"] = uploaded_key
-    if new + upd > 0:
-        st.success(f"✅ {new} טורנירים חדשים, {upd} עודכנו")
-        st.rerun()
-    else:
-        st.warning("לא נמצאו טורנירים בקבצים שהועלו. ודא שאלו קבצי GG Poker .txt תקינים.")
+if uploaded:
+    st.info(f"📁 {len(uploaded)} קבצים נבחרו — לחץ על הכפתור למטה לייבוא")
+    if st.button(f"📥 ייבא {len(uploaded)} קבצים עכשיו", type="primary", use_container_width=True):
+        with st.spinner(f"מעבד {len(uploaded)} קבצים…"):
+            new, upd = handle_uploaded_files(uploaded)
+        if new + upd > 0:
+            st.success(f"✅ {new} טורנירים חדשים, {upd} עודכנו!")
+            st.rerun()
+        else:
+            st.warning("לא נמצאו טורנירים. ודא שאלו קבצי GG Poker .txt תקינים.")
 
 st.divider()
 
