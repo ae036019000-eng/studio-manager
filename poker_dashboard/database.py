@@ -23,7 +23,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-DB_PATH = Path(__file__).parent / "bankroll.db"
+# /tmp תמיד ניתן לכתיבה — גם ב-Streamlit Cloud
+DB_PATH = Path("/tmp/bankroll.db")
 
 
 # ── Connection helper ─────────────────────────────────────────────────────────

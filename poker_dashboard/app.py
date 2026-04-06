@@ -126,20 +126,33 @@ def scan_and_import() -> tuple[int, int]:
     return new_c, upd_c
 
 
-def handle_uploaded_files(files) -> tuple[int, int]:
-    """עיבוד קבצים מהזיכרון — לא נדרשת כתיבה לדיסק."""
+def handle_uploaded_files(files) -> tuple[int, int, list[str]]:
+    """עיבוד קבצים מהזיכרון — מחזיר (חדשים, עודכנו, לוג_אבחון)."""
     new_c = upd_c = 0
     seen: dict[str, dict] = {}
+    log: list[str] = []
 
     for f in files:
         try:
             content = f.getvalue().decode("utf-8", errors="replace")
-        except Exception:
+        except Exception as e:
+            log.append(f"❌ {f.name}: שגיאת קריאה — {e}")
             continue
+
         result = hh_parser.parse_content(content, f.name)
         if result is None:
+            # הראה שורה ראשונה לאבחון
+            first_line = content.strip().splitlines()[0][:80] if content.strip() else "(ריק)"
+            log.append(f"⚠️ {f.name}: לא זוהה כטורניר — שורה ראשונה: {first_line}")
             continue
+
         tid = result["tournament_id"]
+        log.append(
+            f"✅ {f.name} → ID:{tid} | "
+            f"buy-in:${result['buy_in']} | "
+            f"bounties:${result['bounties']:.2f} | "
+            f"תאריך:{result['date']}"
+        )
         if tid not in seen:
             seen[tid] = result
         else:
@@ -150,7 +163,8 @@ def handle_uploaded_files(files) -> tuple[int, int]:
         if r == "inserted":  new_c += 1
         elif r == "updated": upd_c += 1
 
-    return new_c, upd_c
+    log.insert(0, f"📊 סיכום: {len(files)} קבצים, {len(seen)} טורנירים ייחודיים, {new_c} חדשים, {upd_c} עודכנו")
+    return new_c, upd_c, log
 
 
 def fmt(v: float, sign: bool = False) -> str:
@@ -219,12 +233,21 @@ if uploaded:
     st.info(f"📁 {len(uploaded)} קבצים נבחרו — לחץ על הכפתור למטה לייבוא")
     if st.button(f"📥 ייבא {len(uploaded)} קבצים עכשיו", type="primary", use_container_width=True):
         with st.spinner(f"מעבד {len(uploaded)} קבצים…"):
-            new, upd = handle_uploaded_files(uploaded)
+            new, upd, parse_log = handle_uploaded_files(uploaded)
+        st.session_state["parse_log"] = parse_log
         if new + upd > 0:
             st.success(f"✅ {new} טורנירים חדשים, {upd} עודכנו!")
             st.rerun()
         else:
-            st.warning("לא נמצאו טורנירים. ודא שאלו קבצי GG Poker .txt תקינים.")
+            st.error("❌ לא נמצאו טורנירים. ראה פירוט למטה:")
+            for line in parse_log[:10]:
+                st.caption(line)
+
+# הצג לוג אבחון מהייבוא האחרון
+if st.session_state.get("parse_log"):
+    with st.expander("🔍 פירוט ייבוא אחרון"):
+        for line in st.session_state["parse_log"][:30]:
+            st.caption(line)
 
 st.divider()
 

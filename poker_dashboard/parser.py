@@ -11,25 +11,40 @@ from pathlib import Path
 
 # ── Regex patterns for GG Poker hand history format ──────────────────────────
 
-# Hand header: "Poker Hand #HD1234567890: Tournament #123456789, $5.00+$0.50 NLH ..."
+# Tournament ID — כמה פורמטים: #T123, #123456, Tournament #HD...
 RE_TOURNAMENT_ID = re.compile(r"Tournament\s+#(\w+)", re.IGNORECASE)
-RE_BUYIN = re.compile(r"\$(\d+(?:\.\d+)?)\s*\+\s*\$(\d+(?:\.\d+)?)", re.IGNORECASE)
-RE_DATE = re.compile(r"(\d{4})[/-](\d{2})[/-](\d{2})\s+(\d{2}):(\d{2}):(\d{2})")
-RE_TITLE = re.compile(
-    r"Tournament\s+#\w+,\s*(?:\$[\d.]+\+\$[\d.]+\s+)?(.+?)(?:,|\s+-\s+|\s+Level\s+)",
+
+# Buy-in — $5+$0.50 / $5.00+$0.50 / 5+0.5 / ($5+$0.50)
+RE_BUYIN = re.compile(
+    r"\$?(\d+(?:\.\d+)?)\s*\+\s*\$?(\d+(?:\.\d+)?)",
+    re.IGNORECASE,
+)
+# Buy-in without rake, e.g. "Buy-in: $10.00" or "Total Buy-In: $10.50"
+RE_BUYIN_SINGLE = re.compile(
+    r"(?:buy.?in|total buy.?in)[:\s]+\$?(\d+(?:\.\d+)?)",
     re.IGNORECASE,
 )
 
-# Bounty lines (PKO): "Hero wins $2.50 for eliminating PlayerX"
-# GG uses several variants — catch them all
+# Date formats: 2024/03/15 18:00:12 or 2024-03-15 18:00:12
+RE_DATE = re.compile(r"(\d{4})[/-](\d{2})[/-](\d{2})\s+(\d{2}):(\d{2}):(\d{2})")
+
+RE_TITLE = re.compile(
+    r"Tournament\s+#\w+,\s*(?:\$?[\d.]+\+\$?[\d.]+\s+)?(.+?)(?:,|\s+-\s+|\s+Level\s+)",
+    re.IGNORECASE,
+)
+
+# Bounty — כל הגרסאות הידועות של GG Poker
 RE_BOUNTY = re.compile(
     r"Hero\s+(?:wins?|collected?)\s+(?:the\s+)?\$(\d+(?:\.\d+)?)"
     r"(?:\s+(?:bounty|from bounty|for (?:eliminating|knocking out)))?",
     re.IGNORECASE,
 )
-# Also catch: "wins bounty of $X"
 RE_BOUNTY_ALT = re.compile(
     r"Hero\s+wins?\s+bounty\s+of\s+\$(\d+(?:\.\d+)?)", re.IGNORECASE
+)
+# "Hero: wins bounty $X"
+RE_BOUNTY_ALT2 = re.compile(
+    r"Hero[:\s]+wins?\s+\$?(\d+(?:\.\d+)?)\s+bounty", re.IGNORECASE
 )
 
 # Filename patterns: "HH20231015 T123456789 No Limit Hold'em $5+$0.50.txt"
@@ -49,20 +64,26 @@ def _parse_date(match: re.Match) -> datetime | None:
 
 
 def _extract_buyin_from_text(text: str) -> tuple[float, float]:
-    """Return (buy_in, rake) from the first $X+$Y pattern found."""
-    m = RE_BUYIN.search(text)
+    """Return (buy_in, rake). Tries $X+$Y first, then single buy-in line."""
+    # נסה $X+$Y (buy-in + rake)
+    for m in RE_BUYIN.finditer(text):
+        bi, rk = float(m.group(1)), float(m.group(2))
+        # סנן התאמות לא סבירות (כגון chip counts כמו 1000+200)
+        if bi <= 10000:
+            return bi, rk
+    # נסה "Buy-in: $X" בלבד
+    m = RE_BUYIN_SINGLE.search(text)
     if m:
-        return float(m.group(1)), float(m.group(2))
+        return float(m.group(1)), 0.0
     return 0.0, 0.0
 
 
 def _extract_bounties_from_hand(hand: str) -> float:
     """Sum all bounty amounts won by Hero in a single hand block."""
     total = 0.0
-    for m in RE_BOUNTY.finditer(hand):
-        total += float(m.group(1))
-    for m in RE_BOUNTY_ALT.finditer(hand):
-        total += float(m.group(1))
+    for pattern in (RE_BOUNTY, RE_BOUNTY_ALT, RE_BOUNTY_ALT2):
+        for m in pattern.finditer(hand):
+            total += float(m.group(1))
     return total
 
 
