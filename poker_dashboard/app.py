@@ -125,10 +125,30 @@ def scan_and_import() -> tuple[int, int]:
 
 
 def handle_uploaded_files(files) -> tuple[int, int]:
-    HAND_HISTORY_FOLDER.mkdir(parents=True, exist_ok=True)
+    """עיבוד קבצים מהזיכרון — לא נדרשת כתיבה לדיסק."""
+    new_c = upd_c = 0
+    seen: dict[str, dict] = {}
+
     for f in files:
-        (HAND_HISTORY_FOLDER / f.name).write_bytes(f.getvalue())
-    return scan_and_import()
+        try:
+            content = f.getvalue().decode("utf-8", errors="replace")
+        except Exception:
+            continue
+        result = hh_parser.parse_content(content, f.name)
+        if result is None:
+            continue
+        tid = result["tournament_id"]
+        if tid not in seen:
+            seen[tid] = result
+        else:
+            seen[tid]["bounties"] += result["bounties"]
+
+    for t in seen.values():
+        r = db.upsert_tournament(t)
+        if r == "inserted":  new_c += 1
+        elif r == "updated": upd_c += 1
+
+    return new_c, upd_c
 
 
 def fmt(v: float, sign: bool = False) -> str:
@@ -196,19 +216,23 @@ st.divider()
 st.subheader("📂 העלאת קבצי GG Poker")
 
 uploaded = st.file_uploader(
-    "בחר קבצי היסטוריית ידיים",
+    "בחר קבצי היסטוריית ידיים (.txt מ-GG Poker)",
     type=["txt"],
     accept_multiple_files=True,
-    label_visibility="collapsed",
+    label_visibility="visible",
 )
-if uploaded:
-    n_files = len(uploaded)
-    label = f"📥 ייבא {n_files} קובץ" if n_files == 1 else f"📥 ייבא {n_files} קבצים"
-    if st.button(label):
-        with st.spinner("שומר ומעבד…"):
-            new, upd = handle_uploaded_files(uploaded)
+
+# ייבוא אוטומטי — מעבד ברגע שיש קבצים חדשים
+uploaded_key = tuple(sorted(f.name for f in uploaded)) if uploaded else ()
+if uploaded and uploaded_key != st.session_state.get("last_upload_key"):
+    with st.spinner(f"מעבד {len(uploaded)} קבצים…"):
+        new, upd = handle_uploaded_files(uploaded)
+    st.session_state["last_upload_key"] = uploaded_key
+    if new + upd > 0:
         st.success(f"✅ {new} טורנירים חדשים, {upd} עודכנו")
         st.rerun()
+    else:
+        st.warning("לא נמצאו טורנירים בקבצים שהועלו. ודא שאלו קבצי GG Poker .txt תקינים.")
 
 st.divider()
 

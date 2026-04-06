@@ -97,71 +97,66 @@ def _info_from_filename(filename: str) -> dict:
     return info
 
 
-def parse_file(filepath: str | Path) -> dict | None:
+def parse_content(content: str, filename: str) -> dict | None:
     """
-    Parse a single GG Poker hand history .txt file.
+    Parse GG Poker hand history from a string (in-memory, no disk access).
 
     Returns a dict with keys:
         tournament_id, filename, date, buy_in, rake, bounties, title, source_file
-    or None if the file cannot be identified as a tournament hand history.
+    or None if not a recognisable tournament history.
     """
-    filepath = Path(filepath)
-
-    # Seed with filename hints (fallback)
-    info = _info_from_filename(filepath.name)
+    info = _info_from_filename(filename)
     info.setdefault("tournament_id", None)
     info.setdefault("date", None)
     info.setdefault("buy_in", 0.0)
     info.setdefault("rake", 0.0)
-    info["bounties"] = 0.0
-    info["title"] = "Unknown"
-    info["filename"] = filepath.name
-    info["source_file"] = str(filepath)
+    info["bounties"]    = 0.0
+    info["title"]       = "Unknown"
+    info["filename"]    = filename
+    info["source_file"] = filename
 
-    try:
-        raw = filepath.read_text(encoding="utf-8", errors="replace")
-    except OSError:
+    if not content.strip():
         return None
 
-    if not raw.strip():
-        return None
-
-    # Split into individual hands — GG uses blank lines as separators
-    hands = [h.strip() for h in re.split(r"\n{2,}", raw) if h.strip()]
-
+    hands = [h.strip() for h in re.split(r"\n{2,}", content) if h.strip()]
     if not hands:
         return None
 
     first_hand = hands[0]
 
-    # ── Tournament ID ────────────────────────────────────────────────────────
     m = RE_TOURNAMENT_ID.search(first_hand)
     if m:
         info["tournament_id"] = m.group(1)
-
     if not info["tournament_id"]:
-        # Not a tournament hand history — skip
         return None
 
-    # ── Date ─────────────────────────────────────────────────────────────────
     m = RE_DATE.search(first_hand)
     if m:
         info["date"] = _parse_date(m)
 
-    # ── Buy-in / Rake ─────────────────────────────────────────────────────────
     bi, rk = _extract_buyin_from_text(first_hand)
     if bi > 0:
         info["buy_in"] = bi
-        info["rake"] = rk
+        info["rake"]   = rk
 
-    # ── Title ─────────────────────────────────────────────────────────────────
     info["title"] = _parse_title(first_hand)
 
-    # ── Bounties (scan every hand) ────────────────────────────────────────────
     for hand in hands:
         info["bounties"] += _extract_bounties_from_hand(hand)
 
     return info
+
+
+def parse_file(filepath: str | Path) -> dict | None:
+    """
+    Parse a single GG Poker hand history .txt file from disk.
+    """
+    filepath = Path(filepath)
+    try:
+        raw = filepath.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    return parse_content(raw, filepath.name)
 
 
 def parse_folder(folder: str | Path) -> list[dict]:
