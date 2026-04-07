@@ -64,6 +64,25 @@ def init_db() -> None:
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS game_stats (
+                tournament_id   TEXT     PRIMARY KEY,
+                hands_played    INTEGER  DEFAULT 0,
+                vpip_pct        REAL,
+                pfr_pct         REAL,
+                af              REAL,
+                fold_pf_pct     REAL,
+                saw_flop_pct    REAL,
+                wtsd_pct        REAL,
+                wwsf_pct        REAL,
+                cbet_pct        REAL,
+                fold_to_3b_pct  REAL,
+                three_bet_pct   REAL,
+                updated_at      TEXT
+            )
+            """
+        )
 
 
 # ── Write operations ──────────────────────────────────────────────────────────
@@ -208,3 +227,63 @@ def get_stats() -> dict:
             """
         ).fetchone()
     return dict(row)
+
+
+# ── Game stats ────────────────────────────────────────────────────────────────
+
+def upsert_game_stats(tournament_id: str, stats: dict) -> None:
+    """שמור או עדכן סטטיסטיקות משחק לטורניר."""
+    with _connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO game_stats
+                (tournament_id, hands_played, vpip_pct, pfr_pct, af,
+                 fold_pf_pct, saw_flop_pct, wtsd_pct, wwsf_pct,
+                 cbet_pct, fold_to_3b_pct, three_bet_pct, updated_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+            ON CONFLICT(tournament_id) DO UPDATE SET
+                hands_played   = excluded.hands_played,
+                vpip_pct       = excluded.vpip_pct,
+                pfr_pct        = excluded.pfr_pct,
+                af             = excluded.af,
+                fold_pf_pct    = excluded.fold_pf_pct,
+                saw_flop_pct   = excluded.saw_flop_pct,
+                wtsd_pct       = excluded.wtsd_pct,
+                wwsf_pct       = excluded.wwsf_pct,
+                cbet_pct       = excluded.cbet_pct,
+                fold_to_3b_pct = excluded.fold_to_3b_pct,
+                three_bet_pct  = excluded.three_bet_pct,
+                updated_at     = excluded.updated_at
+            """,
+            (
+                tournament_id,
+                stats.get("hands_played", 0),
+                stats.get("vpip_pct"),
+                stats.get("pfr_pct"),
+                stats.get("af"),
+                stats.get("fold_pf_pct"),
+                stats.get("saw_flop_pct"),
+                stats.get("wtsd_pct"),
+                stats.get("wwsf_pct"),
+                stats.get("cbet_pct"),
+                stats.get("fold_to_3b_pct"),
+                stats.get("three_bet_pct"),
+                _now(),
+            ),
+        )
+
+
+def get_all_game_stats() -> list[dict]:
+    """החזר את כל סטטיסטיקות המשחק מחוברות לתאריך הטורניר."""
+    with _connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT  gs.*,
+                    t.date,
+                    t.title
+            FROM    game_stats gs
+            JOIN    tournaments t USING (tournament_id)
+            ORDER   BY COALESCE(t.date, gs.updated_at) ASC
+            """
+        ).fetchall()
+    return [dict(r) for r in rows]

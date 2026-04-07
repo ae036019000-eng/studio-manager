@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import database as db
 import parser as hh_parser
+import analyzer as hh_analyzer
 
 # ── הגדרות עמוד ──────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -167,10 +168,15 @@ def fmt(v: float, sign: bool = False) -> str:
     return f"{p}${v:,.2f}"
 
 
+def _ss_game_stats() -> dict[str, dict]:
+    return st.session_state.setdefault("game_stats", {})
+
+
 def handle_uploaded_files(files) -> tuple[int, int, list[str]]:
-    """מנתח קבצים מהזיכרון, שומר ב-session_state."""
+    """מנתח קבצים מהזיכרון, שומר ב-session_state + מריץ ניתוח משחק."""
     new_c = upd_c = 0
-    seen: dict[str, dict] = {}
+    # tid → (tournament_dict, raw_text)
+    seen_with_content: dict[str, list] = {}
     log: list[str] = []
 
     for f in files:
@@ -188,12 +194,14 @@ def handle_uploaded_files(files) -> tuple[int, int, list[str]]:
 
         tid = result["tournament_id"]
         log.append(f"✅ {f.name[:40]} → #{tid} | buy-in:${result['buy_in']:.2f} | bounty:${result['bounties']:.2f}")
-        if tid not in seen:
-            seen[tid] = result
+        if tid not in seen_with_content:
+            seen_with_content[tid] = [result, content]
         else:
-            seen[tid]["bounties"] += result["bounties"]
+            seen_with_content[tid][0]["bounties"] += result["bounties"]
+            seen_with_content[tid][1] += "\n\n" + content
 
-    for t in seen.values():
+    # ── שמור טורנירים + הרץ ניתוח משחק ─────────────────────────────────────
+    for tid, (t, raw_content) in seen_with_content.items():
         tid = t["tournament_id"]
         if tid in _ss_tournaments():
             upd_c += 1
@@ -201,7 +209,19 @@ def handle_uploaded_files(files) -> tuple[int, int, list[str]]:
             new_c += 1
         _ss_upsert(t)
 
-    log.insert(0, f"📊 {len(files)} קבצים | {len(seen)} טורנירים ייחודיים | ✅ {new_c} חדשים | 🔄 {upd_c} עודכנו")
+        # ניתוח משחק — מנתח כל יד בקובץ
+        try:
+            game_stats = hh_analyzer.analyze_tournament(raw_content)
+            if game_stats.get("hands_played", 0) > 0:
+                _ss_game_stats()[tid] = {"tournament_id": tid, "date": t.get("date"), "title": t.get("title"), **game_stats}
+                try:
+                    db.upsert_game_stats(tid, game_stats)
+                except Exception:
+                    pass
+        except Exception as e:
+            log.append(f"⚠️ ניתוח משחק נכשל עבור {tid}: {e}")
+
+    log.insert(0, f"📊 {len(files)} קבצים | {len(seen_with_content)} טורנירים ייחודיים | ✅ {new_c} חדשים | 🔄 {upd_c} עודכנו")
     return new_c, upd_c, log
 
 
@@ -397,13 +417,191 @@ else:
 
 st.divider()
 
-# ── 7. ניהול ─────────────────────────────────────────────────────────────────
+# ═════════════════════════════════════════════════════════════════════════════
+# 7. ניתוח משחק — שיפור לאורך זמן
+# ═════════════════════════════════════════════════════════════════════════════
+
+st.subheader("🧠 ניתוח משחק")
+
+gs_rows = list(_ss_game_stats().values())
+
+# נסה לטעון מה-DB אם session_state ריק
+if not gs_rows:
+    try:
+        gs_rows = db.get_all_game_stats()
+        for row in gs_rows:
+            _ss_game_stats()[row["tournament_id"]] = row
+    except Exception:
+        pass
+
+# סנן רק טורנירים עם מספיק ידיים
+gs_rows = [r for r in gs_rows if (r.get("hands_played") or 0) >= 10]
+
+if not gs_rows:
+    st.info("העלה קבצי GG Poker כדי לקבל ניתוח משחק. הנתונים מחושבים אוטומטית בזמן הייבוא.")
+else:
+    gs_df = pd.DataFrame(gs_rows)
+    gs_df["date_dt"] = pd.to_datetime(gs_df.get("date", pd.Series(dtype=str)), errors="coerce")
+    gs_df = gs_df.sort_values("date_dt").reset_index(drop=True)
+    gs_df["lbl"] = gs_df["date_dt"].dt.strftime("%d/%m").fillna("—")
+
+    # ── סיכום ממוצע ─────────────────────────────────────────────────────────
+    st.markdown("**ממוצע כולל**")
+    avg_vpip = gs_df["vpip_pct"].mean()
+    avg_pfr  = gs_df["pfr_pct"].mean()
+    avg_af   = gs_df["af"].mean()
+    avg_cbet = gs_df["cbet_pct"].mean()
+
+    ma1, ma2, ma3, ma4 = st.columns(4)
+    with ma1: st.metric("VPIP ממוצע", f"{avg_vpip:.1f}%", help="אידיאלי: 16-28%")
+    with ma2: st.metric("PFR ממוצע",  f"{avg_pfr:.1f}%",  help="אידיאלי: 12-22%")
+    with ma3: st.metric("AF ממוצע",   f"{avg_af:.2f}",    help="אידיאלי: 2-6")
+    with ma4: st.metric("C-Bet ממוצע",f"{avg_cbet:.1f}%", help="אידיאלי: 50-80%")
+
+    st.divider()
+
+    # ── גרפי שיפור לאורך זמן ────────────────────────────────────────────────
+    st.markdown("**גרפי שיפור לאורך זמן**")
+
+    STAT_CONFIG = [
+        ("vpip_pct",      "VPIP %",      "#58a6ff", 16, 28),
+        ("pfr_pct",       "PFR %",       "#3fb950", 12, 22),
+        ("af",            "Aggression Factor", "#f0883e", 2.0, 6.0),
+        ("cbet_pct",      "C-Bet %",     "#bc8cff", 50, 80),
+        ("wtsd_pct",      "WTSD %",      "#ff7b72", 22, 32),
+        ("fold_to_3b_pct","Fold to 3-Bet %", "#ffa657", 40, 70),
+    ]
+
+    tab_labels = [c[1] for c in STAT_CONFIG]
+    tabs = st.tabs(tab_labels)
+
+    for tab, (col, label, color, lo, hi) in zip(tabs, STAT_CONFIG):
+        with tab:
+            col_data = gs_df[col].dropna()
+            if len(col_data) < 2:
+                st.caption("אין מספיק נתונים לגרף זה.")
+                continue
+
+            y_vals = gs_df[col].fillna(method="ffill")
+            # Moving average (window=3)
+            ma = y_vals.rolling(3, min_periods=1).mean()
+
+            fig = go.Figure()
+
+            # Ideal range band
+            fig.add_hrect(y0=lo, y1=hi,
+                          fillcolor="rgba(63,185,80,0.08)",
+                          line_width=0, annotation_text="טווח אידיאלי",
+                          annotation_position="top right",
+                          annotation_font=dict(color="#3fb950", size=10))
+
+            # Actual values
+            fig.add_trace(go.Scatter(
+                x=gs_df["lbl"], y=y_vals,
+                mode="lines+markers",
+                line=dict(color=color, width=2, dash="dot"),
+                marker=dict(size=8, color=color),
+                name=label,
+                hovertemplate=f"<b>%{{x}}</b><br>{label}: <b>%{{y:.1f}}</b><extra></extra>",
+            ))
+            # Moving average
+            fig.add_trace(go.Scatter(
+                x=gs_df["lbl"], y=ma,
+                mode="lines",
+                line=dict(color=color, width=3),
+                name="ממוצע נע",
+                hovertemplate=f"<b>%{{x}}</b><br>ממוצע: <b>%{{y:.1f}}</b><extra></extra>",
+            ))
+
+            fig.update_layout(
+                paper_bgcolor="#0d1117", plot_bgcolor="#0d1117",
+                height=240, margin=dict(l=0, r=0, t=10, b=0),
+                font=dict(color="#8b949e", size=11),
+                xaxis=dict(showgrid=False, zeroline=False, tickangle=-45, tickfont=dict(size=11)),
+                yaxis=dict(showgrid=True, gridcolor="#21262d", zeroline=False, tickfont=dict(size=11)),
+                hoverlabel=dict(bgcolor="#161b22", bordercolor="#30363d", font=dict(color="#e6edf3", size=13)),
+                legend=dict(orientation="h", yanchor="bottom", y=1.0,
+                            bgcolor="rgba(0,0,0,0)", font=dict(size=10)),
+            )
+            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False, "responsive": True})
+
+    st.divider()
+
+    # ── גילוי דליפות ─────────────────────────────────────────────────────────
+    st.markdown("**🔍 זיהוי דליפות**")
+
+    # חשב ממוצע על כל הטורנירים
+    avg_stats = {
+        "hands_played":   int(gs_df["hands_played"].sum()),
+        "vpip_pct":       avg_vpip,
+        "pfr_pct":        avg_pfr,
+        "af":             avg_af,
+        "cbet_pct":       avg_cbet,
+        "wtsd_pct":       gs_df["wtsd_pct"].mean(),
+        "fold_to_3b_pct": gs_df["fold_to_3b_pct"].mean(),
+    }
+
+    leaks = hh_analyzer.detect_leaks(avg_stats)
+
+    if not leaks:
+        st.success("✅ לא נמצאו דליפות ברורות — המשחק שלך בטווח הנכון!")
+    else:
+        for leak in leaks:
+            icon = "🔴" if leak["severity"] == "high" else "🟡"
+            direction = "⬇️ נמוך מדי" if leak["direction"] == "low" else "⬆️ גבוה מדי"
+            with st.expander(f"{icon} {leak['name']} — {direction}  ({leak['value']:.1f})"):
+                st.markdown(f"**{leak['message']}**")
+                st.caption(f"טווח אידיאלי: {leak['low']} – {leak['high']}")
+
+                # Mini gauge
+                lo_g, hi_g = leak["low"], leak["high"]
+                val_g = leak["value"]
+                fig_g = go.Figure(go.Indicator(
+                    mode="gauge+number",
+                    value=val_g,
+                    gauge={
+                        "axis": {"range": [max(0, lo_g * 0.5), hi_g * 1.8], "tickfont": {"size": 10}},
+                        "bar":  {"color": "#f85149" if leak["severity"] == "high" else "#d29922"},
+                        "steps": [
+                            {"range": [0, lo_g],   "color": "#21262d"},
+                            {"range": [lo_g, hi_g], "color": "rgba(63,185,80,0.2)"},
+                            {"range": [hi_g, hi_g * 1.8], "color": "#21262d"},
+                        ],
+                        "threshold": {"line": {"color": "#3fb950", "width": 3},
+                                      "thickness": 0.85,
+                                      "value": (lo_g + hi_g) / 2},
+                    },
+                    number={"suffix": "%" if "pct" in leak["key"] else "", "font": {"size": 20, "color": "#e6edf3"}},
+                ))
+                fig_g.update_layout(
+                    paper_bgcolor="#161b22", height=140,
+                    margin=dict(l=10, r=10, t=10, b=10),
+                    font=dict(color="#8b949e"),
+                )
+                st.plotly_chart(fig_g, use_container_width=True, config={"displayModeBar": False})
+
+    st.divider()
+
+    # ── טבלת סטטיסטיקות לפי טורניר ──────────────────────────────────────────
+    with st.expander("📋 טבלת סטטיסטיקות מלאה"):
+        gs_disp = gs_df[["lbl", "hands_played", "vpip_pct", "pfr_pct", "af",
+                          "cbet_pct", "wtsd_pct", "fold_to_3b_pct"]].copy()
+        gs_disp.columns = ["תאריך", "ידיים", "VPIP%", "PFR%", "AF", "C-Bet%", "WTSD%", "Fold/3B%"]
+        for col in ["VPIP%", "PFR%", "C-Bet%", "WTSD%", "Fold/3B%"]:
+            gs_disp[col] = gs_disp[col].map(lambda x: f"{x:.1f}%" if pd.notna(x) else "—")
+        gs_disp["AF"] = gs_disp["AF"].map(lambda x: f"{x:.2f}" if pd.notna(x) else "—")
+        st.dataframe(gs_disp, use_container_width=True, hide_index=True)
+
+st.divider()
+
+# ── 8. ניהול ─────────────────────────────────────────────────────────────────
 with st.expander("⚙️ ניהול רשומות"):
     del_id = st.text_input("מזהה טורניר למחיקה", label_visibility="collapsed",
                            placeholder="Tournament ID")
     if st.button("🗑 מחק רשומה"):
         if del_id.strip():
             _ss_delete(del_id.strip())
+            _ss_game_stats().pop(del_id.strip(), None)
             st.warning(f"נמחק: {del_id}")
             st.rerun()
 
