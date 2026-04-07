@@ -1,6 +1,7 @@
 """
 דשבורד בנקרול פוקר — GG Poker
 מותאם לאייפון | נתונים ב-session_state (אמין ב-Streamlit Cloud)
+3-page routing: dashboard / tournament / improvement
 """
 
 import sys
@@ -112,7 +113,7 @@ db.init_db()
 # session_state — מקור הנתונים הראשי (אמין ב-Streamlit Cloud)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _ss_tournaments() -> dict[str, dict]:
+def _ss_tournaments() -> dict:
     """מחזיר את כל הטורנירים מה-session_state."""
     return st.session_state.setdefault("tournaments", {})
 
@@ -132,7 +133,6 @@ def _ss_upsert(t: dict):
     tid = t["tournament_id"]
     existing = _ss_tournaments().get(tid)
     if existing:
-        # שמור cash_out / notes אם כבר הוכנסו ידנית
         t.setdefault("cash_out", existing.get("cash_out"))
         t.setdefault("notes", existing.get("notes"))
     _ss_tournaments()[tid] = t
@@ -168,16 +168,19 @@ def fmt(v: float, sign: bool = False) -> str:
     return f"{p}${v:,.2f}"
 
 
-def _ss_game_stats() -> dict[str, dict]:
+def _ss_game_stats() -> dict:
     return st.session_state.setdefault("game_stats", {})
 
 
-def handle_uploaded_files(files) -> tuple[int, int, list[str]]:
+def _ss_hand_summaries() -> dict:
+    return st.session_state.setdefault("hand_summaries", {})
+
+
+def handle_uploaded_files(files) -> tuple:
     """מנתח קבצים מהזיכרון, שומר ב-session_state + מריץ ניתוח משחק."""
     new_c = upd_c = 0
-    # tid → (tournament_dict, raw_text)
-    seen_with_content: dict[str, list] = {}
-    log: list[str] = []
+    seen_with_content: dict = {}
+    log: list = []
 
     for f in files:
         try:
@@ -200,7 +203,6 @@ def handle_uploaded_files(files) -> tuple[int, int, list[str]]:
             seen_with_content[tid][0]["bounties"] += result["bounties"]
             seen_with_content[tid][1] += "\n\n" + content
 
-    # ── שמור טורנירים + הרץ ניתוח משחק ─────────────────────────────────────
     for tid, (t, raw_content) in seen_with_content.items():
         tid = t["tournament_id"]
         if tid in _ss_tournaments():
@@ -209,7 +211,6 @@ def handle_uploaded_files(files) -> tuple[int, int, list[str]]:
             new_c += 1
         _ss_upsert(t)
 
-        # ניתוח משחק — מנתח כל יד בקובץ
         try:
             game_stats = hh_analyzer.analyze_tournament(raw_content)
             if game_stats.get("hands_played", 0) > 0:
@@ -220,6 +221,13 @@ def handle_uploaded_files(files) -> tuple[int, int, list[str]]:
                     pass
         except Exception as e:
             log.append(f"⚠️ ניתוח משחק נכשל עבור {tid}: {e}")
+
+        try:
+            summaries = hh_analyzer.get_hand_summaries(raw_content)
+            if summaries:
+                _ss_hand_summaries()[tid] = summaries
+        except Exception:
+            pass
 
     log.insert(0, f"📊 {len(files)} קבצים | {len(seen_with_content)} טורנירים ייחודיים | ✅ {new_c} חדשים | 🔄 {upd_c} עודכנו")
     return new_c, upd_c, log
@@ -237,19 +245,16 @@ df = pd.DataFrame(rows) if rows else pd.DataFrame(
 )
 
 if not df.empty:
-    # עמודות ללא NULL
     for col in ["buy_in", "rake", "bounties"]:
         if col not in df.columns:
             df[col] = 0.0
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
-    # cash_out: שומרים NaN לטורנירים שעוד לא הוכנסו
     if "cash_out" not in df.columns:
         df["cash_out"] = float("nan")
     df["cash_out"] = pd.to_numeric(df["cash_out"], errors="coerce")
 
     df["date_dt"]    = pd.to_datetime(df["date"], errors="coerce")
     df["total_cost"] = df["buy_in"] + df["rake"]
-    # total_return ו-net — NaN אם cash_out חסר
     df["total_return"] = df["bounties"] + df["cash_out"]
     df["net"]          = df["total_return"] - df["total_cost"]
     df["roi_pct"]      = df.apply(
@@ -259,7 +264,6 @@ if not df.empty:
     )
 
 total_inv    = df["total_cost"].sum()  if not df.empty else 0.0
-# KPI רק על טורנירים שיש להם תוצאה ידועה
 df_settled   = df[df["cash_out"].notna()] if not df.empty else pd.DataFrame()
 settled_cost = df_settled["total_cost"].sum()    if not df_settled.empty else 0.0
 total_ret    = df_settled["total_return"].sum()  if not df_settled.empty else 0.0
@@ -270,239 +274,341 @@ missing      = sum(1 for t in rows if t.get("cash_out") is None)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# ממשק משתמש
+# Page render functions
 # ═════════════════════════════════════════════════════════════════════════════
 
-# ── 1. כותרת ─────────────────────────────────────────────────────────────────
-st.markdown("# ♠ דשבורד בנקרול")
-st.caption("GG Poker · מעקב טורנירים")
+def _render_dashboard():
+    # ── 1. כותרת ─────────────────────────────────────────────────────────────
+    st.markdown("# ♠ דשבורד בנקרול")
+    st.caption("GG Poker · מעקב טורנירים")
 
-if missing > 0:
-    st.warning(f"⚠️ {missing} טורנירים ללא נתוני תשלום")
-elif n_total > 0:
-    st.success("✓ כל התשלומים מעודכנים")
+    if missing > 0:
+        st.warning(f"⚠️ {missing} טורנירים ללא נתוני תשלום")
+    elif n_total > 0:
+        st.success("✓ כל התשלומים מעודכנים")
 
-st.divider()
+    st.divider()
 
-# ── 2. העלאת קבצים — form עם כפתור תמיד גלוי ───────────────────────────────
-st.markdown("### 📂 העלאת קבצים חדשים")
-st.caption("בחר קבצי .txt מ-GG Poker — הנתונים מחושבים אוטומטית")
+    # ── 2. העלאת קבצים ───────────────────────────────────────────────────────
+    st.markdown("### 📂 העלאת קבצים חדשים")
+    st.caption("בחר קבצי .txt מ-GG Poker — הנתונים מחושבים אוטומטית")
 
-with st.form("upload_form", clear_on_submit=True):
-    uploaded = st.file_uploader(
-        "בחר קבצי GG Poker (.txt) — אפשר לבחור כמה שרוצה",
-        accept_multiple_files=True,
-        label_visibility="visible",
-    )
-    submitted = st.form_submit_button(
-        "📥 ייבא קבצים עכשיו",
-        use_container_width=True,
-    )
+    with st.form("upload_form", clear_on_submit=True):
+        uploaded = st.file_uploader(
+            "בחר קבצי GG Poker (.txt) — אפשר לבחור כמה שרוצה",
+            accept_multiple_files=True,
+            label_visibility="visible",
+        )
+        submitted = st.form_submit_button(
+            "📥 ייבא קבצים עכשיו",
+            use_container_width=True,
+        )
 
-if submitted:
-    if uploaded:
-        with st.spinner(f"מעבד {len(uploaded)} קבצים…"):
-            new, upd, parse_log = handle_uploaded_files(uploaded)
-        st.session_state["parse_log"] = parse_log
-        if new + upd > 0:
-            st.success(f"✅ {new} חדשים · {upd} עודכנו — רואים את הנתונים למטה!")
-            st.metric("טורנירים שנטענו", len(_ss_tournaments()))
-            st.rerun()
+    if submitted:
+        if uploaded:
+            with st.spinner(f"מעבד {len(uploaded)} קבצים…"):
+                new, upd, parse_log = handle_uploaded_files(uploaded)
+            st.session_state["parse_log"] = parse_log
+            if new + upd > 0:
+                st.success(f"✅ {new} חדשים · {upd} עודכנו — רואים את הנתונים למטה!")
+                st.metric("טורנירים שנטענו", len(_ss_tournaments()))
+                st.rerun()
+            else:
+                st.error("❌ לא זוהו טורנירים. פתח 'פירוט' למטה.")
         else:
-            st.error("❌ לא זוהו טורנירים. פתח 'פירוט' למטה.")
+            st.warning("⬆️ בחר קבצים תחילה, ואז לחץ ייבא")
+
+    if st.session_state.get("parse_log"):
+        with st.expander("🔍 פירוט ייבוא אחרון"):
+            for line in st.session_state["parse_log"][:40]:
+                st.caption(line)
+
+    st.divider()
+
+    # ── 3. KPI ────────────────────────────────────────────────────────────────
+    st.subheader("📊 סיכום")
+
+    if not df.empty and len(df) >= 2:
+        df_sorted_kpi = df.sort_values("date_dt", na_position="last")
+        last10 = df_sorted_kpi.tail(10)
+        inv10 = last10["total_cost"].sum()
+        roi10 = (last10["net"].sum() / inv10 * 100) if inv10 > 0 else 0.0
+        roi_delta_val = roi10 - roi
+        roi_trend_label = f"10 אחרונים: {roi10:+.1f}%"
     else:
-        st.warning("⬆️ בחר קבצים תחילה, ואז לחץ ייבא")
+        roi_delta_val = 0.0
+        roi_trend_label = "—"
 
-if st.session_state.get("parse_log"):
-    with st.expander("🔍 פירוט ייבוא אחרון"):
-        for line in st.session_state["parse_log"][:40]:
-            st.caption(line)
+    c1, c2 = st.columns(2)
+    with c1: st.metric("טורנירים", n_total)
+    with c2: st.metric("סה״כ השקעה", fmt(total_inv))
 
-st.divider()
+    c3, c4 = st.columns(2)
+    with c3: st.metric("סה״כ החזר", fmt(total_ret))
+    with c4: st.metric(
+        "רווח / הפסד",
+        fmt(net_pl, sign=True),
+        delta=f"ROI: {roi:+.1f}%",
+        delta_color="normal" if net_pl >= 0 else "inverse",
+    )
 
-# ── 3. KPI ────────────────────────────────────────────────────────────────────
-st.subheader("📊 סיכום")
+    c5, c6 = st.columns(2)
+    with c5: st.metric(
+        "ROI",
+        f"{roi:+.1f}%",
+        delta=roi_trend_label,
+        delta_color="normal" if roi_delta_val >= 0 else "inverse",
+    )
+    with c6: st.metric("ממתינים", missing)
 
-# חשב ROI של 10 הטורנירים האחרונים לטרנד
-if not df.empty and len(df) >= 2:
-    df_sorted_kpi = df.sort_values("date_dt", na_position="last")
-    last10 = df_sorted_kpi.tail(10)
-    inv10 = last10["total_cost"].sum()
-    roi10 = (last10["net"].sum() / inv10 * 100) if inv10 > 0 else 0.0
-    roi_delta_val = roi10 - roi
-    roi_trend_label = f"10 אחרונים: {roi10:+.1f}%"
-else:
-    roi_delta_val = 0.0
-    roi_trend_label = "—"
+    st.divider()
 
-c1, c2 = st.columns(2)
-with c1: st.metric("טורנירים", n_total)
-with c2: st.metric("סה״כ השקעה", fmt(total_inv))
+    # ── 4. גרף ───────────────────────────────────────────────────────────────
+    st.subheader("📈 צמיחת הבנקרול")
 
-c3, c4 = st.columns(2)
-with c3: st.metric("סה״כ החזר", fmt(total_ret))
-with c4: st.metric(
-    "רווח / הפסד",
-    fmt(net_pl, sign=True),
-    delta=f"ROI: {roi:+.1f}%",
-    delta_color="normal" if net_pl >= 0 else "inverse",
-)
-
-c5, c6 = st.columns(2)
-with c5: st.metric(
-    "ROI",
-    f"{roi:+.1f}%",
-    delta=roi_trend_label,
-    delta_color="normal" if roi_delta_val >= 0 else "inverse",
-)
-with c6: st.metric("ממתינים", missing)
-
-st.divider()
-
-# ── 4. גרף ───────────────────────────────────────────────────────────────────
-st.subheader("📈 צמיחת הבנקרול")
-
-if df.empty:
-    st.markdown("""
+    if df.empty:
+        st.markdown("""
 <div style='text-align:center; padding: 40px 20px; color: #8b949e;'>
     <div style='font-size: 3rem;'>♠</div>
     <h3 style='color: #e6edf3;'>ברוך הבא לדשבורד הפוקר שלך</h3>
     <p>העלה קבצי היסטוריית ידיים מ-GG Poker כדי להתחיל לעקוב אחרי הביצועים שלך.</p>
 </div>
 """, unsafe_allow_html=True)
-else:
-    df_c = df.dropna(subset=["date_dt", "cash_out"]).sort_values("date_dt").copy()
-    if not df_c.empty:
-        df_c["net_t"] = df_c["bounties"].fillna(0) + df_c["cash_out"].fillna(0) - df_c["buy_in"].fillna(0) - df_c["rake"].fillna(0)
-        df_c["cum"]   = df_c["net_t"].cumsum()
-        df_c["lbl"]   = df_c["date_dt"].dt.strftime("%d/%m")
-        colors = ["#3fb950" if v >= 0 else "#f85149" for v in df_c["cum"]]
-
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=df_c["lbl"], y=df_c["cum"],
-            mode="lines+markers",
-            line=dict(color="#58a6ff", width=2.5, shape="spline"),
-            marker=dict(color=colors, size=10, line=dict(color="#0d1117", width=1.5)),
-            fill="tozeroy", fillcolor="rgba(88,166,255,0.08)",
-            hovertemplate="<b>%{x}</b><br>$%{y:,.2f}<extra></extra>",
-        ))
-        fig.add_hline(y=0, line_dash="dot", line_color="#30363d", line_width=1.5)
-        fig.update_layout(
-            paper_bgcolor="#0d1117", plot_bgcolor="#0d1117",
-            height=280, margin=dict(l=0, r=0, t=10, b=0),
-            font=dict(color="#8b949e", size=11),
-            xaxis=dict(showgrid=False, zeroline=False, tickangle=-45, tickfont=dict(size=11)),
-            yaxis=dict(showgrid=True, gridcolor="#21262d", zeroline=False, tickprefix="$", tickfont=dict(size=11)),
-            hoverlabel=dict(bgcolor="#161b22", bordercolor="#30363d", font=dict(color="#e6edf3", size=14)),
-            showlegend=False,
-        )
-        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False, "responsive": True})
     else:
-        st.info("אין טורנירים עם תאריך לגרף.")
+        df_c = df.dropna(subset=["date_dt", "cash_out"]).sort_values("date_dt").copy()
+        if not df_c.empty:
+            df_c["net_t"] = df_c["bounties"].fillna(0) + df_c["cash_out"].fillna(0) - df_c["buy_in"].fillna(0) - df_c["rake"].fillna(0)
+            df_c["cum"]   = df_c["net_t"].cumsum()
+            df_c["lbl"]   = df_c["date_dt"].dt.strftime("%d/%m")
+            colors = ["#3fb950" if v >= 0 else "#f85149" for v in df_c["cum"]]
 
-st.divider()
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=df_c["lbl"], y=df_c["cum"],
+                mode="lines+markers",
+                line=dict(color="#58a6ff", width=2.5, shape="spline"),
+                marker=dict(color=colors, size=10, line=dict(color="#0d1117", width=1.5)),
+                fill="tozeroy", fillcolor="rgba(88,166,255,0.08)",
+                hovertemplate="<b>%{x}</b><br>$%{y:,.2f}<extra></extra>",
+            ))
+            fig.add_hline(y=0, line_dash="dot", line_color="#30363d", line_width=1.5)
+            fig.update_layout(
+                paper_bgcolor="#0d1117", plot_bgcolor="#0d1117",
+                height=280, margin=dict(l=0, r=0, t=10, b=0),
+                font=dict(color="#8b949e", size=11),
+                xaxis=dict(showgrid=False, zeroline=False, tickangle=-45, tickfont=dict(size=11)),
+                yaxis=dict(showgrid=True, gridcolor="#21262d", zeroline=False, tickprefix="$", tickfont=dict(size=11)),
+                hoverlabel=dict(bgcolor="#161b22", bordercolor="#30363d", font=dict(color="#e6edf3", size=14)),
+                showlegend=False,
+            )
+            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False, "responsive": True})
+        else:
+            st.info("אין טורנירים עם תאריך לגרף.")
 
-# ── 5. עדכון כספים ────────────────────────────────────────────────────────────
-st.subheader("💰 עדכון כספים")
+    st.divider()
 
-missing_list = [t for t in rows if t.get("cash_out") is None]
+    # ── 5. עדכון כספים ────────────────────────────────────────────────────────
+    st.subheader("💰 עדכון כספים")
 
-if not missing_list:
-    st.success("✓ הכל מעודכן!")
-else:
-    st.caption(f"{len(missing_list)} טורנירים ממתינים. הכנס $0 אם לא קיבלת תשלום.")
-    for t in missing_list:
-        date_str  = str(t.get("date", ""))[:10] or "—"
-        title_str = t.get("title") or t["tournament_id"]
-        cost      = (t.get("buy_in") or 0) + (t.get("rake") or 0)
+    missing_list = [t for t in rows if t.get("cash_out") is None]
 
-        with st.expander(f"🟡 {date_str}  {title_str[:35]}  [{fmt(cost)}]"):
-            ca, cb = st.columns(2)
-            with ca:
-                payout = st.number_input("סכום ($)", min_value=0.0, step=0.01,
-                                         format="%.2f", key=f"p_{t['tournament_id']}")
-            with cb:
-                notes = st.text_input("הערות", key=f"n_{t['tournament_id']}",
-                                      placeholder="מקום 3, FT...")
-            if st.button("💾 שמור", key=f"s_{t['tournament_id']}"):
-                _ss_set_cash_out(t["tournament_id"], payout, notes)
-                st.success(f"נשמר: {fmt(payout)}")
-                st.rerun()
+    if not missing_list:
+        st.success("✓ הכל מעודכן!")
+    else:
+        st.caption(f"{len(missing_list)} טורנירים ממתינים. הכנס $0 אם לא קיבלת תשלום.")
+        for t in missing_list:
+            date_str  = str(t.get("date", ""))[:10] or "—"
+            title_str = t.get("title") or t["tournament_id"]
+            cost      = (t.get("buy_in") or 0) + (t.get("rake") or 0)
 
-st.divider()
+            with st.expander(f"🟡 {date_str}  {title_str[:35]}  [{fmt(cost)}]"):
+                ca, cb = st.columns(2)
+                with ca:
+                    payout = st.number_input("סכום ($)", min_value=0.0, step=0.01,
+                                             format="%.2f", key=f"p_{t['tournament_id']}")
+                with cb:
+                    notes = st.text_input("הערות", key=f"n_{t['tournament_id']}",
+                                          placeholder="מקום 3, FT...")
+                if st.button("💾 שמור", key=f"s_{t['tournament_id']}"):
+                    _ss_set_cash_out(t["tournament_id"], payout, notes)
+                    st.success(f"נשמר: {fmt(payout)}")
+                    st.rerun()
 
-# ── 6. טבלת היסטוריה ─────────────────────────────────────────────────────────
-st.subheader("🗂 היסטוריית טורנירים")
+    st.divider()
 
-if df.empty:
-    st.info("לא נרשמו טורנירים עדיין.")
-else:
-    fc1, fc2 = st.columns([3, 1])
-    with fc1:
-        search = st.text_input("חיפוש", placeholder="שם טורניר...", label_visibility="collapsed")
-    with fc2:
-        only_p = st.checkbox("⏳ בלבד", value=False)
+    # ── 6. רשימת טורנירים ────────────────────────────────────────────────────
+    st.subheader("🗂 טורנירים")
 
-    disp = df[["date_dt","title","buy_in","bounties","cash_out","net","roi_pct"]].copy()
-    disp.columns = ["תאריך","טורניר","כניסה","באונטי","תשלום","רווח/הפסד","ROI%"]
-    disp["תאריך"]     = disp["תאריך"].dt.strftime("%d/%m/%y").fillna("—")
-    disp["כניסה"]     = disp["כניסה"].map(lambda x: f"${x:,.2f}")
-    disp["באונטי"]    = disp["באונטי"].map(lambda x: f"${x:,.2f}")
-    disp["תשלום"]     = disp["תשלום"].map(lambda x: f"${x:,.2f}" if pd.notna(x) else "⏳")
-    disp["רווח/הפסד"] = disp["רווח/הפסד"].map(
-        lambda x: (f"+${x:,.2f}" if x >= 0 else f"-${abs(x):,.2f}") if pd.notna(x) else "⏳"
-    )
-    disp["ROI%"]      = disp["ROI%"].map(lambda x: f"{x:+.1f}%" if pd.notna(x) else "⏳")
+    if not rows:
+        st.info("לא נרשמו טורנירים עדיין.")
+    else:
+        for t in sorted(rows, key=lambda x: x.get("date") or "", reverse=True):
+            tid = t["tournament_id"]
+            date_s = str(t.get("date",""))[:10] or "—"
+            title  = (t.get("title") or tid)[:40]
+            cost   = (t.get("buy_in") or 0) + (t.get("rake") or 0)
+            co     = t.get("cash_out")
+            net    = ((t.get("bounties") or 0) + (co or 0)) - cost if co is not None else None
+            roi_t  = (net / cost * 100) if (net is not None and cost > 0) else None
 
-    if search:
-        disp = disp[disp["טורניר"].str.contains(search, case=False, na=False)]
-    if only_p:
-        disp = disp[disp["תשלום"] == "⏳"]
+            with st.container():
+                c1, c2 = st.columns([3, 1])
+                with c1:
+                    st.markdown(f"**{title}**  \n{date_s} · Buy-in: ${cost:.2f}")
+                    if net is not None:
+                        color = "#3fb950" if net >= 0 else "#f85149"
+                        sign  = "+" if net >= 0 else ""
+                        st.markdown(f"<span style='color:{color};font-weight:700'>{sign}${net:.2f}</span> &nbsp; ROI: {roi_t:+.1f}%", unsafe_allow_html=True)
+                    else:
+                        st.caption("⏳ ממתין לתוצאה")
+                with c2:
+                    gs = _ss_game_stats().get(tid)
+                    if gs:
+                        if st.button("🔍 ניתוח", key=f"open_{tid}", use_container_width=True):
+                            st.session_state["page"] = "tournament"
+                            st.session_state["selected_tid"] = tid
+                            st.rerun()
+                    else:
+                        st.caption("אין ניתוח")
+                st.divider()
 
-    def color_pl(val):
-        if isinstance(val, str):
-            if val.startswith("+"):
-                return "background-color: #1a3a1a; color: #3fb950"
-            elif val.startswith("-"):
-                return "background-color: #3a1a1a; color: #f85149"
-        return ""
+    # ── ניווט תחתון ──────────────────────────────────────────────────────────
+    bn1, bn2 = st.columns(2)
+    with bn1:
+        st.button("📊 דשבורד", disabled=True, use_container_width=True)
+    with bn2:
+        if st.button("📈 שיפור המשחק", use_container_width=True):
+            st.session_state["page"] = "improvement"
+            st.rerun()
 
-    styled = disp.style.applymap(color_pl, subset=["רווח/הפסד"])
-    st.dataframe(styled, use_container_width=True, hide_index=True,
-                 height=min(60 + len(disp) * 38, 480))
+    st.divider()
 
-st.divider()
+    with st.expander("⚙️ ניהול רשומות"):
+        del_id = st.text_input("מזהה טורניר למחיקה", label_visibility="collapsed",
+                               placeholder="Tournament ID")
+        if del_id.strip():
+            _ss_delete(del_id.strip())
+            _ss_game_stats().pop(del_id.strip(), None)
+            st.warning(f"נמחק: {del_id}")
+            st.rerun()
 
-# ═════════════════════════════════════════════════════════════════════════════
-# 7. ניתוח משחק — שיפור לאורך זמן
-# ═════════════════════════════════════════════════════════════════════════════
+    st.caption("♠ דשבורד בנקרול פוקר · GG Poker")
 
-st.subheader("🧠 ניתוח משחק")
 
-gs_rows = list(_ss_game_stats().values())
+def _render_tournament(tid: str):
+    # Back button
+    if st.button("← חזור לדשבורד"):
+        st.session_state["page"] = "dashboard"
+        st.rerun()
 
-# נסה לטעון מה-DB אם session_state ריק
-if not gs_rows:
-    try:
-        gs_rows = db.get_all_game_stats()
-        for row in gs_rows:
-            _ss_game_stats()[row["tournament_id"]] = row
-    except Exception:
-        pass
+    t   = _ss_tournaments().get(tid, {})
+    gs  = _ss_game_stats().get(tid, {})
+    hs  = _ss_hand_summaries().get(tid, [])
 
-# סנן רק טורנירים עם מספיק ידיים
-gs_rows = [r for r in gs_rows if (r.get("hands_played") or 0) >= 10]
+    # Header
+    title    = t.get("title") or tid
+    date_s   = str(t.get("date",""))[:10] or "—"
+    buy_in   = t.get("buy_in", 0) or 0
+    rake     = t.get("rake", 0) or 0
+    bounties = t.get("bounties", 0) or 0
+    cash_out = t.get("cash_out")
+    cost     = buy_in + rake
+    ret      = (bounties + (cash_out or 0)) if cash_out is not None else None
+    net      = ret - cost if ret is not None else None
+    roi_t    = (net / cost * 100) if (net is not None and cost > 0) else None
 
-if not gs_rows:
-    st.info("העלה קבצי GG Poker כדי לקבל ניתוח משחק. הנתונים מחושבים אוטומטית בזמן הייבוא.")
-else:
+    st.markdown(f"# {title}")
+    st.caption(f"📅 {date_s}  ·  ID: {tid}")
+
+    c1, c2, c3, c4 = st.columns(4)
+    with c1: st.metric("Buy-in", f"${cost:.2f}")
+    with c2: st.metric("Bounties", f"${bounties:.2f}")
+    with c3: st.metric("תשלום", f"${cash_out:.2f}" if cash_out is not None else "⏳")
+    with c4: st.metric("P/L", f"${net:+.2f}" if net is not None else "⏳",
+                       delta=f"ROI {roi_t:+.1f}%" if roi_t is not None else None,
+                       delta_color="normal" if (roi_t or 0) >= 0 else "inverse")
+
+    st.divider()
+
+    # Stats
+    if gs:
+        st.subheader("📊 סטטיסטיקות משחק")
+        hands = gs.get("hands_played", 0)
+        st.caption(f"על בסיס {hands} ידיים")
+
+        sc1, sc2, sc3 = st.columns(3)
+        with sc1: st.metric("VPIP", f"{gs.get('vpip_pct',0):.1f}%", help="אידיאלי: 16-28%")
+        with sc2: st.metric("PFR",  f"{gs.get('pfr_pct',0):.1f}%",  help="אידיאלי: 12-22%")
+        with sc3: st.metric("AF",   f"{gs.get('af',0):.2f}",         help="אידיאלי: 2-6")
+
+        sc4, sc5, sc6 = st.columns(3)
+        with sc4: st.metric("C-Bet",   f"{gs.get('cbet_pct',0):.1f}%",      help="אידיאלי: 50-80%")
+        with sc5: st.metric("WTSD",    f"{gs.get('wtsd_pct',0):.1f}%",      help="אידיאלי: 22-32%")
+        with sc6: st.metric("Fold/3B", f"{gs.get('fold_to_3b_pct',0):.1f}%", help="אידיאלי: 40-70%")
+
+        st.divider()
+
+        # Leaks for THIS tournament
+        st.subheader("🔍 דליפות")
+        leaks = hh_analyzer.detect_leaks(gs)
+        if not leaks:
+            st.success("✅ לא נמצאו דליפות ברורות בטורניר זה")
+        else:
+            for leak in leaks:
+                if leak.get("sample_warning"):
+                    st.info(f"⚠️ {leak['message']}")
+                    continue
+                icon = "🔴" if leak["severity"] == "high" else "🟡"
+                direction = "⬇️ נמוך מדי" if leak["direction"] == "low" else "⬆️ גבוה מדי"
+                st.markdown(f"{icon} **{leak['name']}** — {direction} ({leak['value']:.1f})  \n{leak['message']}")
+
+        st.divider()
+    else:
+        st.info("אין נתוני ניתוח לטורניר זה. נסה להעלות מחדש את הקובץ.")
+
+    # Hand list
+    if hs:
+        st.subheader(f"📋 רשימת ידיים ({len(hs)} ידיים)")
+        hs_df = pd.DataFrame(hs)[["יד","עמדה","פעולה","תוצאה"]]
+        st.dataframe(hs_df, use_container_width=True, hide_index=True,
+                     height=min(60 + len(hs_df) * 35, 500))
+    elif gs:
+        st.info("רשימת ידיים לא זמינה — העלה מחדש את קובץ הטורניר")
+
+
+def _render_improvement():
+    # Back button
+    if st.button("← חזור"):
+        st.session_state["page"] = "dashboard"
+        st.rerun()
+
+    st.markdown("# 📈 התפתחות המשחק שלך")
+    st.caption("ניתוח קבלת ההחלטות שלך לאורך הטורנירים")
+
+    gs_rows = list(_ss_game_stats().values())
+
+    # נסה לטעון מה-DB אם session_state ריק
+    if not gs_rows:
+        try:
+            gs_rows = db.get_all_game_stats()
+            for row in gs_rows:
+                _ss_game_stats()[row["tournament_id"]] = row
+        except Exception:
+            pass
+
+    # סנן רק טורנירים עם מספיק ידיים
+    gs_rows = [r for r in gs_rows if (r.get("hands_played") or 0) >= 10]
+
+    if not gs_rows:
+        st.info("העלה קבצי GG Poker כדי לקבל ניתוח משחק. הנתונים מחושבים אוטומטית בזמן הייבוא.")
+        return
+
     gs_df = pd.DataFrame(gs_rows)
     gs_df["date_dt"] = pd.to_datetime(gs_df.get("date", pd.Series(dtype=str)), errors="coerce")
     gs_df = gs_df.sort_values("date_dt").reset_index(drop=True)
     gs_df["lbl"] = gs_df["date_dt"].dt.strftime("%d/%m").fillna("—")
 
-    # ── סיכום ממוצע ─────────────────────────────────────────────────────────
+    # ── סיכום ממוצע ──────────────────────────────────────────────────────────
     st.markdown("**ממוצע כולל**")
     avg_vpip = gs_df["vpip_pct"].mean()
     avg_pfr  = gs_df["pfr_pct"].mean()
@@ -517,7 +623,7 @@ else:
 
     st.divider()
 
-    # ── סיכום מגמה ──────────────────────────────────────────────────────────
+    # ── סיכום מגמה ───────────────────────────────────────────────────────────
     total_hands = int(gs_df["hands_played"].sum())
     n_gs = len(gs_df)
     if n_gs < 3:
@@ -554,7 +660,7 @@ else:
 
     st.divider()
 
-    # ── גרפי שיפור לאורך זמן ────────────────────────────────────────────────
+    # ── גרפי שיפור לאורך זמן ─────────────────────────────────────────────────
     st.markdown("**גרפי שיפור לאורך זמן**")
 
     STAT_CONFIG = [
@@ -577,19 +683,16 @@ else:
                 continue
 
             y_vals = gs_df[col].ffill()
-            # Moving average (window=3)
             ma = y_vals.rolling(3, min_periods=1).mean()
 
             fig = go.Figure()
 
-            # Ideal range band
             fig.add_hrect(y0=lo, y1=hi,
                           fillcolor="rgba(63,185,80,0.08)",
                           line_width=0, annotation_text="טווח אידיאלי",
                           annotation_position="top right",
                           annotation_font=dict(color="#3fb950", size=10))
 
-            # Actual values
             fig.add_trace(go.Scatter(
                 x=gs_df["lbl"], y=y_vals,
                 mode="lines+markers",
@@ -598,7 +701,6 @@ else:
                 name=label,
                 hovertemplate=f"<b>%{{x}}</b><br>{label}: <b>%{{y:.1f}}</b><extra></extra>",
             ))
-            # Moving average
             fig.add_trace(go.Scatter(
                 x=gs_df["lbl"], y=ma,
                 mode="lines",
@@ -624,7 +726,6 @@ else:
     # ── גילוי דליפות ─────────────────────────────────────────────────────────
     st.markdown("**🔍 זיהוי דליפות**")
 
-    # חשב ממוצע על כל הטורנירים
     avg_stats = {
         "hands_played":   int(gs_df["hands_played"].sum()),
         "vpip_pct":       avg_vpip,
@@ -641,7 +742,6 @@ else:
         st.success("✅ לא נמצאו דליפות ברורות — המשחק שלך בטווח הנכון!")
     else:
         for leak in leaks:
-            # sample_warning — אין direction/value, רק הודעה
             if leak.get("sample_warning"):
                 st.info(f"⚠️ {leak['message']}")
                 continue
@@ -651,7 +751,6 @@ else:
                 st.markdown(f"**{leak['message']}**")
                 st.caption(f"טווח אידיאלי: {leak['low']} – {leak['high']}")
 
-                # Mini gauge
                 lo_g, hi_g = leak["low"], leak["high"]
                 val_g = leak["value"]
                 fig_g = go.Figure(go.Indicator(
@@ -680,6 +779,41 @@ else:
 
     st.divider()
 
+    # ── היסטוריית דליפות (bar chart) ─────────────────────────────────────────
+    st.markdown("**📊 היסטוריית דליפות לפי טורניר**")
+
+    leak_labels = []
+    leak_counts = []
+    for _, row_gs in gs_df.iterrows():
+        lbl_val = row_gs.get("lbl", "—")
+        row_dict = row_gs.to_dict()
+        these_leaks = hh_analyzer.detect_leaks(row_dict)
+        real_leaks = [lk for lk in these_leaks if not lk.get("sample_warning")]
+        leak_labels.append(lbl_val)
+        leak_counts.append(len(real_leaks))
+
+    if any(c > 0 for c in leak_counts):
+        fig_lh = go.Figure(go.Bar(
+            x=leak_labels,
+            y=leak_counts,
+            marker_color=["#f85149" if c >= 3 else "#d29922" if c >= 1 else "#3fb950" for c in leak_counts],
+            hovertemplate="<b>%{x}</b><br>דליפות: %{y}<extra></extra>",
+        ))
+        fig_lh.update_layout(
+            paper_bgcolor="#0d1117", plot_bgcolor="#0d1117",
+            height=220, margin=dict(l=0, r=0, t=10, b=0),
+            font=dict(color="#8b949e", size=11),
+            xaxis=dict(showgrid=False, zeroline=False, tickangle=-45, tickfont=dict(size=11)),
+            yaxis=dict(showgrid=True, gridcolor="#21262d", zeroline=False, tickfont=dict(size=11), dtick=1),
+            hoverlabel=dict(bgcolor="#161b22", bordercolor="#30363d", font=dict(color="#e6edf3", size=13)),
+            showlegend=False,
+        )
+        st.plotly_chart(fig_lh, use_container_width=True, config={"displayModeBar": False, "responsive": True})
+    else:
+        st.success("✅ לא נמצאו דליפות בטורנירים האחרונים!")
+
+    st.divider()
+
     # ── טבלת סטטיסטיקות לפי טורניר ──────────────────────────────────────────
     with st.expander("📋 טבלת סטטיסטיקות מלאה"):
         gs_disp = gs_df[["lbl", "hands_played", "vpip_pct", "pfr_pct", "af",
@@ -690,17 +824,19 @@ else:
         gs_disp["AF"] = gs_disp["AF"].map(lambda x: f"{x:.2f}" if pd.notna(x) else "—")
         st.dataframe(gs_disp, use_container_width=True, hide_index=True)
 
-st.divider()
+    st.caption("♠ דשבורד בנקרול פוקר · GG Poker")
 
-# ── 8. ניהול ─────────────────────────────────────────────────────────────────
-with st.expander("⚙️ ניהול רשומות"):
-    del_id = st.text_input("מזהה טורניר למחיקה", label_visibility="collapsed",
-                           placeholder="Tournament ID")
-    if st.button("🗑 מחק רשומה"):
-        if del_id.strip():
-            _ss_delete(del_id.strip())
-            _ss_game_stats().pop(del_id.strip(), None)
-            st.warning(f"נמחק: {del_id}")
-            st.rerun()
 
-st.caption("♠ דשבורד בנקרול פוקר · GG Poker")
+# ═════════════════════════════════════════════════════════════════════════════
+# Routing
+# ═════════════════════════════════════════════════════════════════════════════
+
+page = st.session_state.get("page", "dashboard")
+selected_tid = st.session_state.get("selected_tid")
+
+if page == "tournament" and selected_tid:
+    _render_tournament(selected_tid)
+elif page == "improvement":
+    _render_improvement()
+else:
+    _render_dashboard()
