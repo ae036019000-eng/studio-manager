@@ -285,6 +285,48 @@ def analyze_tournament(content: str) -> dict:
     }
 
 
+RE_HAND_NUM = re.compile(r"Hand #(\w+)", re.IGNORECASE)
+
+
+def get_hand_summaries(content: str) -> list[dict]:
+    """Returns per-hand summaries for the hand list UI."""
+    content = content.replace('\r\n', '\n').replace('\r', '\n')
+    hands = [h.strip() for h in re.split(r"\n{2,}", content) if h.strip()]
+    summaries = []
+    for i, hand_text in enumerate(hands):
+        r = analyze_hand(hand_text)
+        if r is None:
+            continue
+        # Position
+        if r.is_btn:   pos = "BTN"
+        elif r.is_sb:  pos = "SB"
+        elif r.is_bb:  pos = "BB"
+        else:          pos = "—"
+        # Action summary
+        if r.fold_pf:
+            action = "קיפול preflop"
+        elif r.three_bet:
+            action = "3-bet preflop"
+        elif r.pfr:
+            action = "raise preflop"
+        elif r.vpip:
+            action = "call preflop"
+        else:
+            action = "check/walk"
+        if r.saw_flop and not r.fold_pf:
+            if r.cbet_made:    action += " ← c-bet"
+            if r.went_to_sd:   action += " ← showdown"
+        outcome = "✅ ניצחון" if r.won_hand else "❌ הפסד"
+        summaries.append({
+            "יד":     i + 1,
+            "עמדה":   pos,
+            "פעולה":  action,
+            "תוצאה":  outcome,
+            "won":    r.won_hand,
+        })
+    return summaries
+
+
 # ── Leak detector ─────────────────────────────────────────────────────────────
 
 # טווחים אידיאליים לטורנירים (ערכים ממוצעים של שחקנים רווחיים)
