@@ -70,7 +70,7 @@ def _extract_buyin(header: str) -> tuple[float, float]:
     m = RE_BUYIN_PLUS.search(header)
     if m:
         bi, rk = float(m.group(1)), float(m.group(2))
-        if bi <= 10000:
+        if bi <= 500:  # sanity check — tournament buy-ins rarely exceed $500
             return bi, rk
 
     # פורמט GG האמיתי: $3.20 Hold'em
@@ -125,6 +125,9 @@ def parse_content(content: str, filename: str) -> dict | None:
     content = content.strip()
     if not content:
         return None
+
+    # Normalise Windows line endings before splitting
+    content = content.replace('\r\n', '\n').replace('\r', '\n')
 
     hands = [h.strip() for h in re.split(r"\n{2,}", content) if h.strip()]
     if not hands:

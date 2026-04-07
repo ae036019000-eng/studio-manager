@@ -40,7 +40,12 @@ RE_HERO_ALLIN   = re.compile(r"^Hero:.*and is all-in",           re.MULTILINE | 
 RE_SECTION      = re.compile(
     r"\*\*\* (HOLE CARDS|FLOP|TURN|RIVER|SHOWDOWN|SUMMARY) \*\*\*"
 )
-RE_WIN_POT      = re.compile(r"Hero[:\s]+(?:collected|wins?)\s+[\d,]+", re.IGNORECASE)
+RE_WIN_POT      = re.compile(
+    r"Hero[:\s]+(?:collected|wins?)\s+[\d,]+\s+from\s+(?:pot|main pot|side pot)"
+    r"|Hero\s+won\s+\(",
+    re.IGNORECASE,
+)
+RE_WIN_SUMMARY  = re.compile(r"Seat \d+: Hero.*\bwon\b", re.IGNORECASE)
 
 
 # ── Section splitter ──────────────────────────────────────────────────────────
@@ -135,12 +140,20 @@ def analyze_hand(hand_text: str) -> HandResult | None:
                 hero_folded_pf = True
             break  # Hero acted — stop scanning preflop
 
-    # VPIP: put money in voluntarily (raise or call, excluding BB without action)
-    r.vpip = hero_raised_pf or hero_called_pf
+    # VPIP: put money in voluntarily
+    # BB is NOT voluntary if no one raised (BB gets a walk / checks)
+    # BB IS voluntary if BB calls or raises (had option to fold to a raise)
+    if r.is_bb:
+        if hero_called_pf or hero_raised_pf:
+            r.vpip = True
+        # If nobody raised and BB just checks = not voluntary
+    else:
+        r.vpip = hero_raised_pf or hero_called_pf
 
-    # Fold preflop (only counts when NOT in BB and got a walk)
+    # Fold preflop: count if not BB, OR is BB but someone raised (had real choice)
     if hero_folded_pf:
-        r.fold_pf = not r.is_bb  # BB fold to raise counts; pure walk doesn't
+        if not r.is_bb or raises_before_hero > 0:
+            r.fold_pf = True
 
     # Fold to 3-bet: Hero raised, then someone re-raised, then Hero folded
     if hero_raised_pf:
@@ -203,8 +216,8 @@ def analyze_hand(hand_text: str) -> HandResult | None:
     )
     r.went_to_sd = hero_showed
 
-    # Win detection
-    r.won_hand = bool(RE_WIN_POT.search(hand_text))
+    # Win detection — check both in-hand collection lines and SUMMARY seat line
+    r.won_hand = bool(RE_WIN_POT.search(hand_text)) or bool(RE_WIN_SUMMARY.search(hand_text))
     if r.went_to_sd:
         r.won_at_sd = r.won_hand
 
@@ -218,6 +231,7 @@ def analyze_tournament(content: str) -> dict:
     מנתח את כל הידיים בקובץ טורניר.
     מחזיר dict עם כל הסטטיסטיקות המצוברות.
     """
+    content = content.replace('\r\n', '\n').replace('\r', '\n')
     hands = [h.strip() for h in re.split(r"\n{2,}", content) if h.strip()]
 
     results: list[HandResult] = []
@@ -243,10 +257,11 @@ def analyze_tournament(content: str) -> dict:
     wwsf_count       = sum(1 for r in results if r.saw_flop and r.won_hand)
     cbet_opps        = sum(1 for r in results if r.cbet_opp)
     cbet_made        = sum(1 for r in results if r.cbet_made)
-    three_bet_opps   = sum(1 for r in results if any(
-        # opportunity = faced a raise while not being the raiser
-        not r.pfr and r.vpip or not r.pfr
-    ))
+    # 3-bet opportunity: Hero faced a raise from others (raises_before_hero tracked
+    # per hand, but HandResult doesn't store it). Approximate: any hand where Hero
+    # did NOT open-raise but still had a raise in front (vpip call or fold after raise).
+    # Use three_bet itself to count; opportunity = three_bet OR (folded/called facing raise).
+    three_bet_opps   = sum(1 for r in results if r.three_bet or (not r.pfr and (r.vpip or r.fold_pf)))
     three_bet_count  = sum(1 for r in results if r.three_bet)
     fold_to_3b_opps  = sum(1 for r in results if r.pfr)  # raised PF = potential 3-bet target
     fold_to_3b_count = sum(1 for r in results if r.fold_to_3b)
@@ -288,10 +303,14 @@ def detect_leaks(stats: dict) -> list[dict]:
     מחזיר רשימת דליפות שנמצאו.
     כל פריט: {stat, name, desc, value, low, high, severity, message}
     """
-    if stats.get("hands_played", 0) < 20:
+    hands_played = stats.get("hands_played", 0)
+    if hands_played < 15:
         return []   # אין מספיק ידיים לניתוח
 
     leaks = []
+    if hands_played < 50:
+        leaks.append({"key": "sample_warning", "name": "Sample Size", "message": "פחות מ-50 ידיים — הסטטיסטיקה עשויה להיות לא מייצגת", "severity": "low", "sample_warning": True})
+
     for key, (lo, hi, name, desc) in IDEAL_RANGES.items():
         val = stats.get(key)
         if val is None:
