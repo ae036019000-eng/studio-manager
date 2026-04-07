@@ -27,78 +27,125 @@ st.set_page_config(
     menu_items={"Get Help": None, "Report a bug": None, "About": None},
 )
 
-# ── CSS — מינימלי, בטוח ל-iOS ─────────────────────────────────────────────────
+# ── CSS — Premium Dark Poker Aesthetic ────────────────────────────────────────
 st.markdown("""
 <style>
-html, body, [data-testid="stAppViewContainer"] {
-    background-color: #0d1117;
-    color: #e6edf3;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+*, html, body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
+    background-color: #070B14 !important;
+    color: #E2E8F0 !important;
     direction: rtl;
 }
-[data-testid="stHeader"] { background: transparent; }
-.block-container { padding: 1rem 0.75rem 4rem 0.75rem !important; max-width: 480px !important; }
 
+[data-testid="stHeader"] { background: transparent !important; border-bottom: 1px solid #1E2D45; }
+[data-testid="stSidebar"] { background: #0A101C !important; border-left: 1px solid #1E2D45 !important; }
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p { color: #94A3B8 !important; font-size: 0.82rem !important; }
+
+.block-container { padding: 1.5rem 1.25rem 4rem !important; max-width: 900px !important; }
+
+/* Metrics */
 [data-testid="stMetric"] {
-    background: #161b22;
-    border: 1px solid #21262d;
-    border-radius: 12px;
-    padding: 14px 8px !important;
-    text-align: center;
+    background: linear-gradient(135deg, #0F1623 0%, #141D2B 100%) !important;
+    border: 1px solid #1E2D45 !important;
+    border-radius: 14px !important;
+    padding: 18px 14px !important;
+    transition: border-color 0.2s;
 }
-[data-testid="stMetricLabel"] p  { color: #8b949e !important; font-size: 0.75rem !important; font-weight: 600 !important; }
-[data-testid="stMetricValue"]    { font-size: 1.45rem !important; font-weight: 800 !important; direction: ltr; }
-[data-testid="stMetricDelta"]    { justify-content: center; }
+[data-testid="stMetric"]:hover { border-color: #2563EB !important; }
+[data-testid="stMetricLabel"] p  { color: #64748B !important; font-size: 0.72rem !important; font-weight: 600 !important; text-transform: uppercase; letter-spacing: 0.05em; }
+[data-testid="stMetricValue"]    { color: #E2E8F0 !important; font-size: 1.4rem !important; font-weight: 800 !important; direction: ltr; }
+[data-testid="stMetricDelta"]    { justify-content: center !important; font-size: 0.75rem !important; }
 
-/* כפתורים — גדולים ובולטים */
-.stButton > button, button[kind="primary"], button[kind="secondary"] {
+/* Buttons */
+.stButton > button {
+    background: linear-gradient(135deg, #1D4ED8, #2563EB) !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+    min-height: 42px !important;
+    transition: opacity 0.15s, transform 0.1s;
+}
+.stButton > button:hover { opacity: 0.9; transform: translateY(-1px); }
+.stButton > button[kind="secondary"] {
+    background: #1E2D45 !important;
+    color: #94A3B8 !important;
+}
+
+[data-testid="stFormSubmitButton"] > button {
+    background: linear-gradient(135deg, #059669, #10B981) !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 10px !important;
+    font-weight: 700 !important;
+    font-size: 1rem !important;
     min-height: 52px !important;
     width: 100% !important;
-    font-size: 1.05rem !important;
-    font-weight: 700 !important;
-    border-radius: 12px !important;
-    border: none !important;
+    letter-spacing: 0.02em;
 }
-button[kind="primary"] { background: #238636 !important; color: #fff !important; }
-button[kind="secondary"] { background: #21262d !important; color: #e6edf3 !important; }
-.stButton > button { background: #238636 !important; color: #fff !important; }
 
-/* שדות קלט */
+/* File uploader */
+[data-testid="stFileUploader"] {
+    background: #0F1623 !important;
+    border: 2px dashed #2563EB !important;
+    border-radius: 14px !important;
+}
+[data-testid="stFileUploader"]:hover { border-color: #3B82F6 !important; }
+
+/* Inputs */
 .stTextInput > div > div > input,
 .stNumberInput > div > div > input {
-    background: #161b22 !important;
-    border: 1px solid #30363d !important;
-    color: #e6edf3 !important;
-    border-radius: 10px !important;
-    min-height: 48px !important;
-    font-size: 1rem !important;
+    background: #0F1623 !important;
+    border: 1px solid #1E2D45 !important;
+    border-radius: 8px !important;
+    color: #E2E8F0 !important;
+    min-height: 42px !important;
     direction: ltr;
 }
+.stTextInput > div > div > input:focus,
+.stNumberInput > div > div > input:focus { border-color: #2563EB !important; outline: none !important; }
 
-/* uploader */
-[data-testid="stFileUploader"] {
-    background: #161b22 !important;
-    border: 2px dashed #58a6ff !important;
-    border-radius: 14px !important;
-    padding: 4px !important;
+/* Tabs */
+[data-testid="stTabs"] [role="tab"] {
+    color: #64748B !important;
+    font-weight: 600 !important;
+    font-size: 0.8rem !important;
+    border-radius: 8px 8px 0 0 !important;
+}
+[data-testid="stTabs"] [role="tab"][aria-selected="true"] {
+    color: #3B82F6 !important;
+    border-bottom: 2px solid #3B82F6 !important;
+    background: transparent !important;
 }
 
-/* submit button בתוך form */
-[data-testid="stFormSubmitButton"] > button {
-    background: #238636 !important;
-    color: #fff !important;
-    min-height: 56px !important;
-    font-size: 1.1rem !important;
-    width: 100% !important;
+/* Expander */
+[data-testid="stExpander"] {
+    background: #0F1623 !important;
+    border: 1px solid #1E2D45 !important;
     border-radius: 12px !important;
-    border: none !important;
-    font-weight: 700 !important;
-    margin-top: 10px;
 }
+[data-testid="stExpander"] summary { color: #94A3B8 !important; font-weight: 600 !important; }
 
-div[data-testid="stDataFrame"] { border-radius: 12px; overflow: hidden; }
-hr { border-color: #21262d !important; margin: 16px 0 !important; }
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+/* Dataframe */
+[data-testid="stDataFrame"] { border-radius: 12px !important; overflow: hidden !important; border: 1px solid #1E2D45 !important; }
+
+/* Divider */
+hr { border-color: #1E2D45 !important; margin: 20px 0 !important; }
+
+/* Success/Info/Warning */
+[data-testid="stAlert"] { border-radius: 10px !important; border-width: 1px !important; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #0F1623; }
+::-webkit-scrollbar-thumb { background: #1E2D45; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #2563EB; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -357,8 +404,14 @@ total_won    = df_settled.loc[df_settled["cash_out"] > 0, "cash_out"].sum() if n
 
 def _render_dashboard():
     # ── 1. כותרת ─────────────────────────────────────────────────────────────
-    st.markdown("# ♠ דשבורד בנקרול")
-    st.caption("GG Poker · מעקב טורנירים")
+    st.markdown("""
+<div style='margin-bottom:8px;'>
+    <h1 style='color:#E2E8F0; font-size:1.8rem; font-weight:800; margin:0; letter-spacing:-0.02em;'>
+        ♠ דשבורד בנקרול
+    </h1>
+    <p style='color:#64748B; font-size:0.82rem; margin:4px 0 0;'>GG Poker · מעקב טורנירים ועמדת משחק</p>
+</div>
+""", unsafe_allow_html=True)
 
     if missing > 0:
         st.warning(f"⚠️ {missing} טורנירים ללא נתוני תשלום")
@@ -368,8 +421,15 @@ def _render_dashboard():
     st.divider()
 
     # ── 2. העלאת קבצים ───────────────────────────────────────────────────────
-    st.markdown("### 📂 העלאת קבצים חדשים")
-    st.caption("בחר קבצי .txt מ-GG Poker — הנתונים מחושבים אוטומטית")
+    st.markdown("""
+<div style='background: linear-gradient(135deg, #0F1A2E, #111827);
+            border: 1px solid #1E3A5F; border-radius:14px; padding:16px 20px; margin-bottom:16px;'>
+    <div style='color:#3B82F6; font-size:1.1rem; font-weight:700;'>📂 העלאת קבצים</div>
+    <div style='color:#64748B; font-size:0.78rem; margin-top:4px;'>
+        העלה קבצי HH (ידיים) + TS (סיכומים) — האפליקציה מזהה אוטומטית
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
     with st.form("upload_form", clear_on_submit=True):
         uploaded = st.file_uploader(
@@ -404,7 +464,7 @@ def _render_dashboard():
     st.divider()
 
     # ── 3. KPI ────────────────────────────────────────────────────────────────
-    st.subheader("📊 סיכום")
+    st.markdown("<h3 style='color:#E2E8F0; font-weight:700; margin:8px 0 16px; font-size:1.1rem; letter-spacing:-0.01em;'>📊 סיכום</h3>", unsafe_allow_html=True)
 
     if not df.empty and len(df) >= 2:
         df_sorted_kpi = df.sort_values("date_dt", na_position="last")
@@ -456,7 +516,7 @@ def _render_dashboard():
     st.divider()
 
     # ── 4. גרף ───────────────────────────────────────────────────────────────
-    st.subheader("📈 צמיחת הבנקרול")
+    st.markdown("<h3 style='color:#E2E8F0; font-weight:700; margin:8px 0 16px; font-size:1.1rem; letter-spacing:-0.01em;'>📈 צמיחת הבנקרול</h3>", unsafe_allow_html=True)
 
     if df.empty:
         st.markdown("""
@@ -500,7 +560,7 @@ def _render_dashboard():
     st.divider()
 
     # ── 5. עדכון כספים ────────────────────────────────────────────────────────
-    st.subheader("💰 עדכון כספים")
+    st.markdown("<h3 style='color:#E2E8F0; font-weight:700; margin:8px 0 16px; font-size:1.1rem; letter-spacing:-0.01em;'>💰 עדכון כספים</h3>", unsafe_allow_html=True)
 
     missing_list = [t for t in rows if t.get("cash_out") is None]
 
@@ -529,7 +589,7 @@ def _render_dashboard():
     st.divider()
 
     # ── 6. רשימת טורנירים ────────────────────────────────────────────────────
-    st.subheader("🗂 טורנירים")
+    st.markdown("<h3 style='color:#E2E8F0; font-weight:700; margin:8px 0 16px; font-size:1.1rem; letter-spacing:-0.01em;'>🗂 טורנירים</h3>", unsafe_allow_html=True)
 
     if not rows:
         st.info("לא נרשמו טורנירים עדיין.")
