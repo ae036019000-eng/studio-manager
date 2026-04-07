@@ -237,27 +237,36 @@ df = pd.DataFrame(rows) if rows else pd.DataFrame(
 )
 
 if not df.empty:
-    # ודא שכל העמודות קיימות גם אם חסרות מה-session_state — Fix 1
-    NUMERIC_COLS = ["buy_in", "rake", "bounties", "cash_out"]
-    for col in NUMERIC_COLS:
+    # עמודות ללא NULL
+    for col in ["buy_in", "rake", "bounties"]:
         if col not in df.columns:
             df[col] = 0.0
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
-    df["date_dt"]      = pd.to_datetime(df["date"], errors="coerce")
-    df["total_cost"]   = df["buy_in"] + df["rake"]
+    # cash_out: שומרים NaN לטורנירים שעוד לא הוכנסו
+    if "cash_out" not in df.columns:
+        df["cash_out"] = float("nan")
+    df["cash_out"] = pd.to_numeric(df["cash_out"], errors="coerce")
+
+    df["date_dt"]    = pd.to_datetime(df["date"], errors="coerce")
+    df["total_cost"] = df["buy_in"] + df["rake"]
+    # total_return ו-net — NaN אם cash_out חסר
     df["total_return"] = df["bounties"] + df["cash_out"]
     df["net"]          = df["total_return"] - df["total_cost"]
     df["roi_pct"]      = df.apply(
-        lambda r: r["net"] / r["total_cost"] * 100 if r["total_cost"] > 0 else 0, axis=1
+        lambda r: r["net"] / r["total_cost"] * 100
+        if r["total_cost"] > 0 and pd.notna(r["net"]) else float("nan"),
+        axis=1,
     )
 
-total_inv = df["total_cost"].sum()   if not df.empty else 0.0
-total_ret = df["total_return"].sum() if not df.empty else 0.0
-net_pl    = total_ret - total_inv
-roi       = (net_pl / total_inv * 100) if total_inv > 0 else 0.0
-n_total   = len(df)
-# count truly missing cash_out from raw rows (before numeric coercion filled NaN→0)
-missing   = sum(1 for t in rows if t.get("cash_out") is None)
+total_inv    = df["total_cost"].sum()  if not df.empty else 0.0
+# KPI רק על טורנירים שיש להם תוצאה ידועה
+df_settled   = df[df["cash_out"].notna()] if not df.empty else pd.DataFrame()
+settled_cost = df_settled["total_cost"].sum()    if not df_settled.empty else 0.0
+total_ret    = df_settled["total_return"].sum()  if not df_settled.empty else 0.0
+net_pl       = total_ret - settled_cost
+roi          = (net_pl / settled_cost * 100) if settled_cost > 0 else 0.0
+n_total      = len(df)
+missing      = sum(1 for t in rows if t.get("cash_out") is None)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -362,7 +371,7 @@ if df.empty:
 </div>
 """, unsafe_allow_html=True)
 else:
-    df_c = df.dropna(subset=["date_dt"]).sort_values("date_dt").copy()
+    df_c = df.dropna(subset=["date_dt", "cash_out"]).sort_values("date_dt").copy()
     if not df_c.empty:
         df_c["net_t"] = df_c["bounties"].fillna(0) + df_c["cash_out"].fillna(0) - df_c["buy_in"].fillna(0) - df_c["rake"].fillna(0)
         df_c["cum"]   = df_c["net_t"].cumsum()
@@ -441,8 +450,10 @@ else:
     disp["כניסה"]     = disp["כניסה"].map(lambda x: f"${x:,.2f}")
     disp["באונטי"]    = disp["באונטי"].map(lambda x: f"${x:,.2f}")
     disp["תשלום"]     = disp["תשלום"].map(lambda x: f"${x:,.2f}" if pd.notna(x) else "⏳")
-    disp["רווח/הפסד"] = disp["רווח/הפסד"].map(lambda x: f"+${x:,.2f}" if x > 0 else f"-${abs(x):,.2f}")
-    disp["ROI%"]      = disp["ROI%"].map(lambda x: f"{x:+.1f}%")
+    disp["רווח/הפסד"] = disp["רווח/הפסד"].map(
+        lambda x: (f"+${x:,.2f}" if x >= 0 else f"-${abs(x):,.2f}") if pd.notna(x) else "⏳"
+    )
+    disp["ROI%"]      = disp["ROI%"].map(lambda x: f"{x:+.1f}%" if pd.notna(x) else "⏳")
 
     if search:
         disp = disp[disp["טורניר"].str.contains(search, case=False, na=False)]
@@ -565,7 +576,7 @@ else:
                 st.caption("אין מספיק נתונים לגרף זה.")
                 continue
 
-            y_vals = gs_df[col].fillna(method="ffill")
+            y_vals = gs_df[col].ffill()
             # Moving average (window=3)
             ma = y_vals.rolling(3, min_periods=1).mean()
 
@@ -630,6 +641,10 @@ else:
         st.success("✅ לא נמצאו דליפות ברורות — המשחק שלך בטווח הנכון!")
     else:
         for leak in leaks:
+            # sample_warning — אין direction/value, רק הודעה
+            if leak.get("sample_warning"):
+                st.info(f"⚠️ {leak['message']}")
+                continue
             icon = "🔴" if leak["severity"] == "high" else "🟡"
             direction = "⬇️ נמוך מדי" if leak["direction"] == "low" else "⬆️ גבוה מדי"
             with st.expander(f"{icon} {leak['name']} — {direction}  ({leak['value']:.1f})"):
