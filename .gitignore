@@ -28,6 +28,11 @@ Thumbs.db
 *.swp
 *.swo
 
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
 # Uploads (keep folder but ignore contents)
 uploads/*
 !uploads/.gitkeep
