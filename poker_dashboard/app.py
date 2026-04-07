@@ -123,8 +123,12 @@ def _ss_load_from_db():
     if st.session_state.get("db_loaded"):
         return
     for row in db.get_all_tournaments():
-        tid = row["tournament_id"]
-        _ss_tournaments()[tid] = row
+        _ss_tournaments()[row["tournament_id"]] = row
+    try:
+        for row in db.get_all_game_stats():
+            _ss_game_stats()[row["tournament_id"]] = row
+    except Exception:
+        pass
     st.session_state["db_loaded"] = True
 
 
@@ -264,7 +268,9 @@ def handle_uploaded_files(files) -> tuple:
         if raw_content:
             try:
                 game_stats = hh_analyzer.analyze_tournament(raw_content)
-                if game_stats.get("hands_played", 0) > 0:
+                hands = game_stats.get("hands_played", 0)
+                log.append(f"🧠 ניתוח #{tid}: {hands} ידיים | VPIP {game_stats.get('vpip_pct',0):.1f}% | PFR {game_stats.get('pfr_pct',0):.1f}%")
+                if hands > 0:
                     _ss_game_stats()[tid] = {
                         "tournament_id": tid,
                         "date":  merged.get("date"),
@@ -273,8 +279,8 @@ def handle_uploaded_files(files) -> tuple:
                     }
                     try:
                         db.upsert_game_stats(tid, game_stats)
-                    except Exception:
-                        pass
+                    except Exception as db_err:
+                        log.append(f"⚠️ DB שמירה נכשלה עבור {tid}: {db_err}")
             except Exception as e:
                 log.append(f"⚠️ ניתוח משחק נכשל עבור {tid}: {e}")
 
