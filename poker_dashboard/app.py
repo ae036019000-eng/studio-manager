@@ -237,13 +237,15 @@ df = pd.DataFrame(rows) if rows else pd.DataFrame(
 )
 
 if not df.empty:
-    # ודא שכל העמודות קיימות גם אם חסרות מה-session_state
-    for col in ["buy_in", "rake", "bounties", "cash_out"]:
+    # ודא שכל העמודות קיימות גם אם חסרות מה-session_state — Fix 1
+    NUMERIC_COLS = ["buy_in", "rake", "bounties", "cash_out"]
+    for col in NUMERIC_COLS:
         if col not in df.columns:
             df[col] = 0.0
+        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
     df["date_dt"]      = pd.to_datetime(df["date"], errors="coerce")
-    df["total_cost"]   = df["buy_in"].fillna(0) + df["rake"].fillna(0)
-    df["total_return"] = df["bounties"].fillna(0) + df["cash_out"].fillna(0)
+    df["total_cost"]   = df["buy_in"] + df["rake"]
+    df["total_return"] = df["bounties"] + df["cash_out"]
     df["net"]          = df["total_return"] - df["total_cost"]
     df["roi_pct"]      = df.apply(
         lambda r: r["net"] / r["total_cost"] * 100 if r["total_cost"] > 0 else 0, axis=1
@@ -254,7 +256,8 @@ total_ret = df["total_return"].sum() if not df.empty else 0.0
 net_pl    = total_ret - total_inv
 roi       = (net_pl / total_inv * 100) if total_inv > 0 else 0.0
 n_total   = len(df)
-missing   = int(df["cash_out"].isna().sum()) if not df.empty else 0
+# count truly missing cash_out from raw rows (before numeric coercion filled NaN→0)
+missing   = sum(1 for t in rows if t.get("cash_out") is None)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -273,7 +276,8 @@ elif n_total > 0:
 st.divider()
 
 # ── 2. העלאת קבצים — form עם כפתור תמיד גלוי ───────────────────────────────
-st.subheader("📂 העלאת קבצים")
+st.markdown("### 📂 העלאת קבצים חדשים")
+st.caption("בחר קבצי .txt מ-GG Poker — הנתונים מחושבים אוטומטית")
 
 with st.form("upload_form", clear_on_submit=True):
     uploaded = st.file_uploader(
@@ -293,6 +297,7 @@ if submitted:
         st.session_state["parse_log"] = parse_log
         if new + upd > 0:
             st.success(f"✅ {new} חדשים · {upd} עודכנו — רואים את הנתונים למטה!")
+            st.metric("טורנירים שנטענו", len(_ss_tournaments()))
             st.rerun()
         else:
             st.error("❌ לא זוהו טורנירים. פתח 'פירוט' למטה.")
@@ -309,16 +314,38 @@ st.divider()
 # ── 3. KPI ────────────────────────────────────────────────────────────────────
 st.subheader("📊 סיכום")
 
+# חשב ROI של 10 הטורנירים האחרונים לטרנד
+if not df.empty and len(df) >= 2:
+    df_sorted_kpi = df.sort_values("date_dt", na_position="last")
+    last10 = df_sorted_kpi.tail(10)
+    inv10 = last10["total_cost"].sum()
+    roi10 = (last10["net"].sum() / inv10 * 100) if inv10 > 0 else 0.0
+    roi_delta_val = roi10 - roi
+    roi_trend_label = f"10 אחרונים: {roi10:+.1f}%"
+else:
+    roi_delta_val = 0.0
+    roi_trend_label = "—"
+
 c1, c2 = st.columns(2)
 with c1: st.metric("טורנירים", n_total)
 with c2: st.metric("סה״כ השקעה", fmt(total_inv))
 
 c3, c4 = st.columns(2)
 with c3: st.metric("סה״כ החזר", fmt(total_ret))
-with c4: st.metric("רווח / הפסד", fmt(net_pl, sign=True), delta=f"{roi:+.1f}%")
+with c4: st.metric(
+    "רווח / הפסד",
+    fmt(net_pl, sign=True),
+    delta=f"ROI: {roi:+.1f}%",
+    delta_color="normal" if net_pl >= 0 else "inverse",
+)
 
 c5, c6 = st.columns(2)
-with c5: st.metric("ROI", f"{roi:+.1f}%")
+with c5: st.metric(
+    "ROI",
+    f"{roi:+.1f}%",
+    delta=roi_trend_label,
+    delta_color="normal" if roi_delta_val >= 0 else "inverse",
+)
 with c6: st.metric("ממתינים", missing)
 
 st.divider()
@@ -327,7 +354,13 @@ st.divider()
 st.subheader("📈 צמיחת הבנקרול")
 
 if df.empty:
-    st.info("העלה קבצים כדי לראות את הגרף.")
+    st.markdown("""
+<div style='text-align:center; padding: 40px 20px; color: #8b949e;'>
+    <div style='font-size: 3rem;'>♠</div>
+    <h3 style='color: #e6edf3;'>ברוך הבא לדשבורד הפוקר שלך</h3>
+    <p>העלה קבצי היסטוריית ידיים מ-GG Poker כדי להתחיל לעקוב אחרי הביצועים שלך.</p>
+</div>
+""", unsafe_allow_html=True)
 else:
     df_c = df.dropna(subset=["date_dt"]).sort_values("date_dt").copy()
     if not df_c.empty:
@@ -416,7 +449,16 @@ else:
     if only_p:
         disp = disp[disp["תשלום"] == "⏳"]
 
-    st.dataframe(disp, use_container_width=True, hide_index=True,
+    def color_pl(val):
+        if isinstance(val, str):
+            if val.startswith("+"):
+                return "background-color: #1a3a1a; color: #3fb950"
+            elif val.startswith("-"):
+                return "background-color: #3a1a1a; color: #f85149"
+        return ""
+
+    styled = disp.style.applymap(color_pl, subset=["רווח/הפסד"])
+    st.dataframe(styled, use_container_width=True, hide_index=True,
                  height=min(60 + len(disp) * 38, 480))
 
 st.divider()
@@ -461,6 +503,43 @@ else:
     with ma2: st.metric("PFR ממוצע",  f"{avg_pfr:.1f}%",  help="אידיאלי: 12-22%")
     with ma3: st.metric("AF ממוצע",   f"{avg_af:.2f}",    help="אידיאלי: 2-6")
     with ma4: st.metric("C-Bet ממוצע",f"{avg_cbet:.1f}%", help="אידיאלי: 50-80%")
+
+    st.divider()
+
+    # ── סיכום מגמה ──────────────────────────────────────────────────────────
+    total_hands = int(gs_df["hands_played"].sum())
+    n_gs = len(gs_df)
+    if n_gs < 3:
+        st.info("צריך לפחות 3 טורנירים לניתוח מגמה")
+    else:
+        st.markdown(f"**סיכום מגמה** — על בסיס {total_hands:,} ידיים")
+        half = n_gs // 2
+        first_half  = gs_df.iloc[:half]
+        second_half = gs_df.iloc[half:]
+
+        TREND_STATS = [
+            ("vpip_pct", "VPIP"),
+            ("pfr_pct",  "PFR"),
+            ("af",       "Aggression Factor"),
+            ("cbet_pct", "C-Bet"),
+        ]
+        trend_lines = []
+        for stat_col, stat_name in TREND_STATS:
+            if stat_col not in gs_df.columns:
+                continue
+            avg_first  = first_half[stat_col].mean()
+            avg_second = second_half[stat_col].mean()
+            diff = avg_second - avg_first
+            if abs(diff) < 0.5:
+                icon = "➡️ יציב"
+            elif diff > 0:
+                icon = "📈 משתפר"
+            else:
+                icon = "📉 מדרדר"
+            trend_lines.append(f"**{stat_name}**: {icon}  ({avg_first:.1f} → {avg_second:.1f})")
+
+        for line in trend_lines:
+            st.markdown(line)
 
     st.divider()
 
