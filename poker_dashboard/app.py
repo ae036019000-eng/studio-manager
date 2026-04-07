@@ -177,9 +177,14 @@ def _ss_hand_summaries() -> dict:
 
 
 def handle_uploaded_files(files) -> tuple:
-    """מנתח קבצים מהזיכרון, שומר ב-session_state + מריץ ניתוח משחק."""
+    """
+    מנתח שני סוגי קבצים:
+      - קבצי היסטוריית ידיים (Poker Hand #...) → ניתוח משחק + bounties
+      - קבצי סיכום טורניר (Tournament #..., Buy-in:) → cash_out אוטומטי + buy-in מדויק
+    """
     new_c = upd_c = 0
-    seen_with_content: dict = {}
+    # tid → {"hh": (result, raw_content), "summary": result}
+    by_tid: dict[str, dict] = {}
     log: list = []
 
     for f in files:
@@ -189,47 +194,104 @@ def handle_uploaded_files(files) -> tuple:
             log.append(f"❌ {f.name}: {e}")
             continue
 
-        result = hh_parser.parse_content(content, f.name)
-        if result is None:
-            first = content.strip().splitlines()[0][:80] if content.strip() else "(ריק)"
-            log.append(f"⚠️ {f.name}: לא זוהה — {first}")
+        # זיהוי סוג קובץ
+        if hh_parser._is_summary(content):
+            result = hh_parser.parse_summary_content(content, f.name)
+            if result is None:
+                log.append(f"⚠️ {f.name}: סיכום לא זוהה")
+                continue
+            tid = result["tournament_id"]
+            log.append(
+                f"📋 {f.name[:40]} → סיכום #{tid} | "
+                f"עלות:${result['buy_in']+result['rake']:.2f} | "
+                f"תשלום:${result['cash_out']:.2f}" if result.get('cash_out') else
+                f"📋 {f.name[:40]} → סיכום #{tid}"
+            )
+            by_tid.setdefault(tid, {})["summary"] = result
+        else:
+            result = hh_parser.parse_content(content, f.name)
+            if result is None:
+                first = content.strip().splitlines()[0][:80] if content.strip() else "(ריק)"
+                log.append(f"⚠️ {f.name}: לא זוהה — {first}")
+                continue
+            tid = result["tournament_id"]
+            log.append(
+                f"✅ {f.name[:40]} → ידיים #{tid} | "
+                f"buy-in:${result['buy_in']:.2f} | bounty:${result['bounties']:.2f}"
+            )
+            by_tid.setdefault(tid, {})
+            if "hh" not in by_tid[tid]:
+                by_tid[tid]["hh"] = [result, content]
+            else:
+                by_tid[tid]["hh"][0]["bounties"] += result["bounties"]
+                by_tid[tid]["hh"][1] += "\n\n" + content
+
+    # ── מיזוג ושמירה ─────────────────────────────────────────────────────────
+    for tid, parts in by_tid.items():
+        hh_result, raw_content = parts["hh"] if "hh" in parts else (None, "")
+        summary = parts.get("summary")
+
+        # בנה רשומת טורניר — סיכום גובר על ידיים (buy-in ו-cash_out מדויקים יותר)
+        if hh_result and summary:
+            merged = {**hh_result}
+            merged["buy_in"]   = summary["buy_in"]
+            merged["rake"]     = summary["rake"]
+            merged["cash_out"] = summary["cash_out"]
+            merged["title"]    = summary["title"] if summary["title"] != "Unknown" else hh_result["title"]
+            if summary.get("date"):
+                merged["date"] = summary["date"]
+        elif summary:
+            merged = {**summary}
+        else:
+            merged = hh_result
+
+        if merged is None:
             continue
 
-        tid = result["tournament_id"]
-        log.append(f"✅ {f.name[:40]} → #{tid} | buy-in:${result['buy_in']:.2f} | bounty:${result['bounties']:.2f}")
-        if tid not in seen_with_content:
-            seen_with_content[tid] = [result, content]
-        else:
-            seen_with_content[tid][0]["bounties"] += result["bounties"]
-            seen_with_content[tid][1] += "\n\n" + content
-
-    for tid, (t, raw_content) in seen_with_content.items():
-        tid = t["tournament_id"]
         if tid in _ss_tournaments():
             upd_c += 1
         else:
             new_c += 1
-        _ss_upsert(t)
 
-        try:
-            game_stats = hh_analyzer.analyze_tournament(raw_content)
-            if game_stats.get("hands_played", 0) > 0:
-                _ss_game_stats()[tid] = {"tournament_id": tid, "date": t.get("date"), "title": t.get("title"), **game_stats}
-                try:
-                    db.upsert_game_stats(tid, game_stats)
-                except Exception:
-                    pass
-        except Exception as e:
-            log.append(f"⚠️ ניתוח משחק נכשל עבור {tid}: {e}")
+        # cash_out מהסיכום — לא נדרוס אם כבר הוזן ידנית
+        existing = _ss_tournaments().get(tid, {})
+        if existing.get("cash_out") is not None and merged.get("cash_out") is None:
+            merged["cash_out"] = existing["cash_out"]
 
-        try:
-            summaries = hh_analyzer.get_hand_summaries(raw_content)
-            if summaries:
-                _ss_hand_summaries()[tid] = summaries
-        except Exception:
-            pass
+        _ss_upsert(merged)
 
-    log.insert(0, f"📊 {len(files)} קבצים | {len(seen_with_content)} טורנירים ייחודיים | ✅ {new_c} חדשים | 🔄 {upd_c} עודכנו")
+        # ניתוח משחק רק אם יש קובץ ידיים
+        if raw_content:
+            try:
+                game_stats = hh_analyzer.analyze_tournament(raw_content)
+                if game_stats.get("hands_played", 0) > 0:
+                    _ss_game_stats()[tid] = {
+                        "tournament_id": tid,
+                        "date":  merged.get("date"),
+                        "title": merged.get("title"),
+                        **game_stats,
+                    }
+                    try:
+                        db.upsert_game_stats(tid, game_stats)
+                    except Exception:
+                        pass
+            except Exception as e:
+                log.append(f"⚠️ ניתוח משחק נכשל עבור {tid}: {e}")
+
+            try:
+                summaries = hh_analyzer.get_hand_summaries(raw_content)
+                if summaries:
+                    _ss_hand_summaries()[tid] = summaries
+            except Exception:
+                pass
+
+    n_hh  = sum(1 for p in by_tid.values() if "hh" in p)
+    n_sum = sum(1 for p in by_tid.values() if "summary" in p)
+    log.insert(0,
+        f"📊 {len(files)} קבצים | {len(by_tid)} טורנירים | "
+        f"📋 {n_sum} סיכומים | 🃏 {n_hh} היסטוריות | "
+        f"✅ {new_c} חדשים | 🔄 {upd_c} עודכנו"
+    )
     return new_c, upd_c, log
 
 

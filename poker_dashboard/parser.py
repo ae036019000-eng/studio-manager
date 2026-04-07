@@ -32,7 +32,7 @@ RE_DATE = re.compile(r"(\d{4})[/-](\d{2})[/-](\d{2})\s+(\d{2}):(\d{2}):(\d{2})")
 
 # שם טורניר: הטקסט שאחרי הפסיק ולפני סכום הכניסה
 RE_TITLE = re.compile(
-    r"Tournament\s+#\d+,\s*(.+?)\s+\$[\d.]+\s+(?:Hold'?em|No\s*Limit|NLH|PLO|Omaha)",
+    r"Tournament\s+#\d+,\s*(.+?)\s+\$[\d.]+,?\s+(?:Hold'?em|No\s*Limit|NLH|PLO|Omaha|Stud)",
     re.IGNORECASE,
 )
 
@@ -113,6 +113,120 @@ def _date_from_filename(filename: str) -> datetime | None:
         except Exception:
             pass
     return None
+
+
+# ── Summary file regexes ──────────────────────────────────────────────────────
+
+RE_SUMMARY_BUYIN_3 = re.compile(
+    r"Buy-in:\s*\$(\d+(?:\.\d+)?)\+\$(\d+(?:\.\d+)?)\+\$(\d+(?:\.\d+)?)"
+)
+RE_SUMMARY_BUYIN_2 = re.compile(
+    r"Buy-in:\s*\$(\d+(?:\.\d+)?)\+\$(\d+(?:\.\d+)?)"
+)
+RE_SUMMARY_PLAYERS  = re.compile(r"(\d[\d,]*)\s+Players", re.IGNORECASE)
+RE_SUMMARY_DATE     = re.compile(
+    r"Tournament started\s+(\d{4})[/-](\d{2})[/-](\d{2})\s+(\d{2}):(\d{2}):(\d{2})"
+)
+RE_SUMMARY_POSITION = re.compile(
+    r"^(\d+(?:st|nd|rd|th))\s*:\s*Hero", re.MULTILINE | re.IGNORECASE
+)
+RE_SUMMARY_RECEIVED = re.compile(
+    r"You received a total of \$(\d+(?:\.\d+)?)", re.IGNORECASE
+)
+RE_SUMMARY_PAYOUT_LINE = re.compile(
+    r"^\d+(?:st|nd|rd|th)\s*:\s*Hero,\s*\$(\d+(?:\.\d+)?)", re.MULTILINE | re.IGNORECASE
+)
+
+
+def _is_summary(content: str) -> bool:
+    """בודק אם הקובץ הוא סיכום טורניר (לא היסטוריית ידיים)."""
+    first = content.strip().splitlines()[0] if content.strip() else ""
+    return (
+        bool(re.match(r"Tournament\s+#\d+,", first))
+        and "Buy-in:" in content[:400]
+        and "Poker Hand" not in content[:200]
+    )
+
+
+def parse_summary_content(content: str, filename: str) -> dict | None:
+    """
+    מנתח קובץ סיכום טורניר של GG Poker.
+    מחזיר dict עם tournament_id, buy_in, rake, cash_out, date, position, players.
+    """
+    content = content.strip().replace('\r\n', '\n').replace('\r', '\n')
+    if not content:
+        return None
+
+    first_line = content.splitlines()[0]
+
+    # Tournament ID
+    m = RE_TOURNAMENT_ID.search(first_line)
+    if not m:
+        return None
+    tournament_id = m.group(1)
+
+    # Title
+    title = _extract_title(first_line)
+
+    # Buy-in
+    buy_in = rake = 0.0
+    m3 = RE_SUMMARY_BUYIN_3.search(content)
+    if m3:
+        # $prize+$rake+$bounty_contribution → cost = all three
+        prize_part  = float(m3.group(1))
+        rake_part   = float(m3.group(2))
+        bounty_part = float(m3.group(3))
+        buy_in = prize_part + bounty_part  # without rake
+        rake   = rake_part
+    else:
+        m2 = RE_SUMMARY_BUYIN_2.search(content)
+        if m2:
+            buy_in = float(m2.group(1))
+            rake   = float(m2.group(2))
+
+    # Date
+    date = None
+    dm = RE_SUMMARY_DATE.search(content)
+    if dm:
+        date = _parse_date(dm)
+    if date is None:
+        date = _date_from_filename(filename)
+
+    # Cash out — prefer "received a total of" line
+    cash_out = None
+    mr = RE_SUMMARY_RECEIVED.search(content)
+    if mr:
+        cash_out = float(mr.group(1))
+    else:
+        mp = RE_SUMMARY_PAYOUT_LINE.search(content)
+        if mp:
+            cash_out = float(mp.group(1))
+
+    # Position and players
+    position = None
+    mpos = RE_SUMMARY_POSITION.search(content)
+    if mpos:
+        position = mpos.group(1)
+
+    players = None
+    mpl = RE_SUMMARY_PLAYERS.search(content)
+    if mpl:
+        players = int(mpl.group(1).replace(",", ""))
+
+    return {
+        "tournament_id": tournament_id,
+        "filename":      filename,
+        "title":         title,
+        "date":          date,
+        "buy_in":        buy_in,
+        "rake":          rake,
+        "bounties":      0.0,        # bounties collected tracked from hand history
+        "cash_out":      cash_out,   # set automatically from summary
+        "position":      position,
+        "players":       players,
+        "source_file":   filename,
+        "is_summary":    True,
+    }
 
 
 # ── API ───────────────────────────────────────────────────────────────────────
