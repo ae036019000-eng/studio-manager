@@ -23,16 +23,13 @@ st.set_page_config(
     page_title="דשבורד בנקרול פוקר",
     page_icon="♠",
     layout="centered",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="auto",
     menu_items={"Get Help": None, "Report a bug": None, "About": None},
 )
 
 # ── CSS — מינימלי, בטוח ל-iOS ─────────────────────────────────────────────────
 st.markdown("""
 <style>
-[data-testid="stSidebar"]        { display: none !important; }
-[data-testid="collapsedControl"] { display: none !important; }
-
 html, body, [data-testid="stAppViewContainer"] {
     background-color: #0d1117;
     color: #e6edf3;
@@ -226,9 +223,11 @@ def handle_uploaded_files(files) -> tuple:
             by_tid.setdefault(tid, {})
             if "hh" not in by_tid[tid]:
                 by_tid[tid]["hh"] = [result, content]
+                by_tid[tid]["hh_count"] = 1
             else:
                 by_tid[tid]["hh"][0]["bounties"] += result["bounties"]
                 by_tid[tid]["hh"][1] += "\n\n" + content
+                by_tid[tid]["hh_count"] = by_tid[tid].get("hh_count", 1) + 1
 
     # ── מיזוג ושמירה ─────────────────────────────────────────────────────────
     for tid, parts in by_tid.items():
@@ -251,6 +250,12 @@ def handle_uploaded_files(files) -> tuple:
 
         if merged is None:
             continue
+
+        hh_count = 0
+        if "hh" in parts:
+            # Count how many HH files contributed (stored separately)
+            hh_count = parts.get("hh_count", 1)
+        merged["entries"] = hh_count if hh_count > 0 else 1
 
         if tid in _ss_tournaments():
             upd_c += 1
@@ -541,7 +546,9 @@ def _render_dashboard():
             with st.container():
                 c1, c2 = st.columns([3, 1])
                 with c1:
-                    st.markdown(f"**{title}**  \n{date_s} · Buy-in: ${cost:.2f}")
+                    entries = t.get("entries", 1)
+                    entries_str = f" · {entries}x כניסות" if entries > 1 else ""
+                    st.markdown(f"**{title}**  \n{date_s} · Buy-in: ${cost:.2f}{entries_str}")
                     if net is not None:
                         color = "#3fb950" if net >= 0 else "#f85149"
                         sign  = "+" if net >= 0 else ""
@@ -559,17 +566,6 @@ def _render_dashboard():
                     else:
                         st.caption("אין ניתוח")
                 st.divider()
-
-    # ── ניווט תחתון ──────────────────────────────────────────────────────────
-    bn1, bn2 = st.columns(2)
-    with bn1:
-        st.button("📊 דשבורד", disabled=True, use_container_width=True)
-    with bn2:
-        if st.button("📈 שיפור המשחק", use_container_width=True):
-            st.session_state["page"] = "improvement"
-            st.rerun()
-
-    st.divider()
 
     with st.expander("⚙️ ניהול רשומות"):
         # מחק הכל
@@ -662,6 +658,8 @@ def _render_tournament(tid: str):
         with sc5: st.metric("WTSD",    f"{gs.get('wtsd_pct',0):.1f}%",      help="אידיאלי: 22-32%")
         with sc6: st.metric("Fold/3B", f"{gs.get('fold_to_3b_pct',0):.1f}%", help="אידיאלי: 40-70%")
 
+        st.caption("📌 הסטטיסטיקות מבוססות על ניתוח של כל יד בטורניר — VPIP, PFR, AF, C-Bet וכו'. ראה טווחים אידיאליים ב-Tooltip.")
+
         st.divider()
 
         # Leaks for THIS tournament
@@ -682,12 +680,46 @@ def _render_tournament(tid: str):
     else:
         st.info("אין נתוני ניתוח לטורניר זה. נסה להעלות מחדש את הקובץ.")
 
-    # Hand list
+    # Hand analysis
     if hs:
-        st.subheader(f"📋 רשימת ידיים ({len(hs)} ידיים)")
-        hs_df = pd.DataFrame(hs)[["יד","עמדה","פעולה","תוצאה"]]
-        st.dataframe(hs_df, use_container_width=True, hide_index=True,
-                     height=min(60 + len(hs_df) * 35, 500))
+        st.subheader(f"📋 ניתוח ידיים ({len(hs)} ידיים)")
+
+        # Section A — Position breakdown table
+        pos_stats = {}
+        for hand in hs:
+            p = hand["עמדה"]
+            pos_stats.setdefault(p, {"ידיים": 0, "ניצחונות": 0})
+            pos_stats[p]["ידיים"] += 1
+            if hand["won"]:
+                pos_stats[p]["ניצחונות"] += 1
+        pos_df = pd.DataFrame([
+            {"עמדה": p, "ידיים": v["ידיים"], "ניצחונות": v["ניצחונות"],
+             "Win%": f"{v['ניצחונות']/v['ידיים']*100:.1f}%"}
+            for p, v in pos_stats.items()
+        ]).sort_values("ידיים", ascending=False)
+        st.markdown("**📍 ביצועים לפי עמדה**")
+        st.dataframe(pos_df, use_container_width=True, hide_index=True)
+
+        # Section B — Pre-flop action breakdown
+        total_h = len(hs)
+        folds   = sum(1 for h in hs if "קיפול" in h["פעולה"])
+        calls   = sum(1 for h in hs if h["פעולה"].startswith("call"))
+        raises  = sum(1 for h in hs if "raise" in h["פעולה"] and "3-bet" not in h["פעולה"])
+        three_b = sum(1 for h in hs if "3-bet" in h["פעולה"])
+        action_df = pd.DataFrame([
+            {"פעולה": "קיפול preflop", "ידיים": folds,   "%": f"{folds/total_h*100:.1f}%"},
+            {"פעולה": "Call",          "ידיים": calls,   "%": f"{calls/total_h*100:.1f}%"},
+            {"פעולה": "Raise/Open",    "ידיים": raises,  "%": f"{raises/total_h*100:.1f}%"},
+            {"פעולה": "3-Bet",         "ידיים": three_b, "%": f"{three_b/total_h*100:.1f}%"},
+        ])
+        st.markdown("**🃏 פירוט פעולות preflop**")
+        st.dataframe(action_df, use_container_width=True, hide_index=True)
+
+        # Section C — Full hand list (collapsed)
+        with st.expander(f"📋 כל הידיים ({len(hs)})"):
+            hs_df = pd.DataFrame(hs)[["יד", "עמדה", "פעולה", "תוצאה"]]
+            st.dataframe(hs_df, use_container_width=True, hide_index=True,
+                         height=min(60 + len(hs_df) * 35, 500))
     elif gs:
         st.info("רשימת ידיים לא זמינה — העלה מחדש את קובץ הטורניר")
 
@@ -941,6 +973,32 @@ def _render_improvement():
         st.dataframe(gs_disp, use_container_width=True, hide_index=True)
 
     st.caption("♠ דשבורד בנקרול פוקר · GG Poker")
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Sidebar navigation
+# ═════════════════════════════════════════════════════════════════════════════
+
+with st.sidebar:
+    st.markdown("## ♠ פוקר")
+    st.divider()
+    nav = st.radio(
+        "ניווט",
+        ["📊 דשבורד", "📈 שיפור משחק"],
+        index=0 if st.session_state.get("page", "dashboard") != "improvement" else 1,
+        label_visibility="collapsed",
+    )
+    if nav == "📊 דשבורד" and st.session_state.get("page") not in ("dashboard", "tournament"):
+        st.session_state["page"] = "dashboard"
+        st.rerun()
+    elif nav == "📈 שיפור משחק" and st.session_state.get("page") != "improvement":
+        st.session_state["page"] = "improvement"
+        st.rerun()
+
+    st.divider()
+    st.caption(f"🃏 {n_total} טורנירים")
+    st.caption(f"💰 ROI: {roi:+.1f}%")
+    st.caption(f"🏆 ITM: {itm_pct:.1f}%")
 
 
 # ═════════════════════════════════════════════════════════════════════════════
