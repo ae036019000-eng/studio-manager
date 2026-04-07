@@ -333,6 +333,11 @@ net_pl       = total_ret - settled_cost
 roi          = (net_pl / settled_cost * 100) if settled_cost > 0 else 0.0
 n_total      = len(df)
 missing      = sum(1 for t in rows if t.get("cash_out") is None)
+# זכיות — טורנירים שקיבלת תשלום כלשהו (cash_out > 0)
+n_settled    = len(df_settled)
+n_wins       = int((df_settled["cash_out"] > 0).sum()) if not df_settled.empty else 0
+itm_pct      = (n_wins / n_settled * 100) if n_settled > 0 else 0.0
+total_won    = df_settled.loc[df_settled["cash_out"] > 0, "cash_out"].sum() if not df_settled.empty else 0.0
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -422,6 +427,20 @@ def _render_dashboard():
         delta_color="normal" if roi_delta_val >= 0 else "inverse",
     )
     with c6: st.metric("ממתינים", missing)
+
+    c7, c8 = st.columns(2)
+    with c7: st.metric(
+        "זכיות (ITM)",
+        f"{n_wins}/{n_settled}",
+        delta=f"{itm_pct:.1f}%",
+        delta_color="normal",
+        help="מספר טורנירים שקיבלת בהם תשלום כלשהו",
+    )
+    with c8: st.metric(
+        "סה״כ זכיות",
+        fmt(total_won),
+        help="סכום כל התשלומים שקיבלת",
+    )
 
     st.divider()
 
@@ -546,13 +565,41 @@ def _render_dashboard():
     st.divider()
 
     with st.expander("⚙️ ניהול רשומות"):
-        del_id = st.text_input("מזהה טורניר למחיקה", label_visibility="collapsed",
-                               placeholder="Tournament ID")
-        if del_id.strip():
-            _ss_delete(del_id.strip())
-            _ss_game_stats().pop(del_id.strip(), None)
-            st.warning(f"נמחק: {del_id}")
+        # מחק הכל
+        st.markdown("**🗑 נקה את כל הנתונים**")
+        st.caption("מוחק את כל הטורנירים מהאפליקציה ומה-DB")
+        if st.button("🗑 מחק הכל ואפס", type="secondary", use_container_width=True):
+            st.session_state.pop("tournaments", None)
+            st.session_state.pop("game_stats", None)
+            st.session_state.pop("hand_summaries", None)
+            st.session_state.pop("db_loaded", None)
+            st.session_state.pop("parse_log", None)
+            try:
+                import sqlite3
+                conn = sqlite3.connect(db.DB_PATH)
+                conn.execute("DELETE FROM tournaments")
+                conn.execute("DELETE FROM game_stats")
+                conn.commit()
+                conn.close()
+            except Exception:
+                pass
+            st.success("✅ כל הנתונים נמחקו — העלה מחדש")
             st.rerun()
+
+        st.divider()
+
+        # מחיקת טורניר בודד
+        st.markdown("**מחיקת טורניר בודד**")
+        with st.form("delete_form"):
+            del_id = st.text_input("מזהה טורניר", label_visibility="collapsed",
+                                   placeholder="Tournament ID (מספר)")
+            if st.form_submit_button("🗑 מחק טורניר זה", use_container_width=True):
+                if del_id.strip():
+                    _ss_delete(del_id.strip())
+                    _ss_game_stats().pop(del_id.strip(), None)
+                    _ss_hand_summaries().pop(del_id.strip(), None)
+                    st.warning(f"נמחק: {del_id}")
+                    st.rerun()
 
     st.caption("♠ דשבורד בנקרול פוקר · GG Poker")
 
