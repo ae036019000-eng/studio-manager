@@ -545,11 +545,11 @@ def _render_dashboard():
             ))
             fig.add_hline(y=0, line_dash="dot", line_color="#30363d", line_width=1.5)
             fig.update_layout(
-                paper_bgcolor="#0d1117", plot_bgcolor="#0d1117",
+                paper_bgcolor="#070B14", plot_bgcolor="#070B14",
                 height=280, margin=dict(l=0, r=0, t=10, b=0),
                 font=dict(color="#8b949e", size=11),
                 xaxis=dict(showgrid=False, zeroline=False, tickangle=-45, tickfont=dict(size=11)),
-                yaxis=dict(showgrid=True, gridcolor="#21262d", zeroline=False, tickprefix="$", tickfont=dict(size=11)),
+                yaxis=dict(showgrid=True, gridcolor="#1E2D45", zeroline=False, tickprefix="$", tickfont=dict(size=11)),
                 hoverlabel=dict(bgcolor="#161b22", bordercolor="#30363d", font=dict(color="#e6edf3", size=14)),
                 showlegend=False,
             )
@@ -595,37 +595,70 @@ def _render_dashboard():
         st.info("לא נרשמו טורנירים עדיין.")
     else:
         for t in sorted(rows, key=lambda x: x.get("date") or "", reverse=True):
-            tid = t["tournament_id"]
+            tid    = t["tournament_id"]
             date_s = str(t.get("date",""))[:10] or "—"
-            title  = (t.get("title") or tid)[:40]
+            title  = (t.get("title") or tid)[:45]
             cost   = (t.get("buy_in") or 0) + (t.get("rake") or 0)
             co     = t.get("cash_out")
-            net    = ((t.get("bounties") or 0) + (co or 0)) - cost if co is not None else None
+            bounties_t = t.get("bounties") or 0
+            net    = (bounties_t + (co or 0)) - cost if co is not None else None
             roi_t  = (net / cost * 100) if (net is not None and cost > 0) else None
+            entries = t.get("entries", 1)
 
-            with st.container():
-                c1, c2 = st.columns([3, 1])
-                with c1:
-                    entries = t.get("entries", 1)
-                    entries_str = f" · {entries}x כניסות" if entries > 1 else ""
-                    st.markdown(f"**{title}**  \n{date_s} · Buy-in: ${cost:.2f}{entries_str}")
-                    if net is not None:
-                        color = "#3fb950" if net >= 0 else "#f85149"
-                        sign  = "+" if net >= 0 else ""
-                        roi_str = f" &nbsp; ROI: {roi_t:+.1f}%" if roi_t is not None else ""
-                        st.markdown(f"<span style='color:{color};font-weight:700'>{sign}${net:.2f}</span>{roi_str}", unsafe_allow_html=True)
-                    else:
-                        st.caption("⏳ ממתין לתוצאה")
-                with c2:
-                    gs = _ss_game_stats().get(tid)
-                    if gs:
-                        if st.button("🔍 ניתוח", key=f"open_{tid}", use_container_width=True):
-                            st.session_state["page"] = "tournament"
-                            st.session_state["selected_tid"] = tid
-                            st.rerun()
-                    else:
-                        st.caption("אין ניתוח")
-                st.divider()
+            # Card border color based on result
+            if net is None:
+                border_color = "#2563EB"   # blue = pending
+            elif net >= 0:
+                border_color = "#10B981"   # green = profit
+            else:
+                border_color = "#EF4444"   # red = loss
+
+            entries_html = f"&nbsp;·&nbsp; 🔄 {entries}x" if entries > 1 else ""
+            card_html = f"""
+<div style='
+    background: linear-gradient(135deg, #0F1623 0%, #141D2B 100%);
+    border: 1px solid {border_color}33;
+    border-right: 3px solid {border_color};
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+'>
+    <div style='display:flex; justify-content:space-between; align-items:flex-start;'>
+        <div style='flex:1'>
+            <div style='color:#E2E8F0; font-weight:700; font-size:0.95rem; margin-bottom:4px;'>{title}</div>
+            <div style='color:#64748B; font-size:0.78rem;'>
+                📅 {date_s} &nbsp;·&nbsp; 💵 ${cost:.2f}{entries_html}
+            </div>
+        </div>
+        <div style='text-align:left; margin-right:8px;'>
+"""
+            if net is not None:
+                sign  = "+" if net >= 0 else ""
+                color = "#10B981" if net >= 0 else "#EF4444"
+                roi_str = f"<div style='color:#64748B; font-size:0.72rem;'>ROI {roi_t:+.1f}%</div>" if roi_t is not None else ""
+                card_html += f"""
+            <div style='color:{color}; font-weight:800; font-size:1.1rem;'>{sign}${net:.2f}</div>
+            {roi_str}
+"""
+            else:
+                card_html += """
+            <div style='color:#F59E0B; font-size:0.85rem; font-weight:600;'>⏳ ממתין</div>
+"""
+            card_html += """
+        </div>
+    </div>
+</div>
+"""
+            col_card, col_btn = st.columns([5, 1])
+            with col_card:
+                st.markdown(card_html, unsafe_allow_html=True)
+            with col_btn:
+                gs = _ss_game_stats().get(tid)
+                if gs:
+                    if st.button("🔍", key=f"open_{tid}", help="ניתוח טורניר", use_container_width=True):
+                        st.session_state["page"] = "tournament"
+                        st.session_state["selected_tid"] = tid
+                        st.rerun()
 
     with st.expander("⚙️ ניהול רשומות"):
         # מחק הכל
@@ -704,7 +737,7 @@ def _render_tournament(tid: str):
 
     # Stats
     if gs:
-        st.subheader("📊 סטטיסטיקות משחק")
+        st.markdown("<h3 style='color:#E2E8F0; font-weight:700; margin:8px 0 16px; font-size:1.1rem; letter-spacing:-0.01em;'>📊 סטטיסטיקות משחק</h3>", unsafe_allow_html=True)
         hands = gs.get("hands_played", 0)
         st.caption(f"על בסיס {hands} ידיים")
 
@@ -723,7 +756,7 @@ def _render_tournament(tid: str):
         st.divider()
 
         # Leaks for THIS tournament
-        st.subheader("🔍 דליפות")
+        st.markdown("<h3 style='color:#E2E8F0; font-weight:700; margin:8px 0 16px; font-size:1.1rem; letter-spacing:-0.01em;'>🔍 דליפות</h3>", unsafe_allow_html=True)
         leaks = hh_analyzer.detect_leaks(gs)
         if not leaks:
             st.success("✅ לא נמצאו דליפות ברורות בטורניר זה")
@@ -742,7 +775,7 @@ def _render_tournament(tid: str):
 
     # Hand analysis
     if hs:
-        st.subheader(f"📋 ניתוח ידיים ({len(hs)} ידיים)")
+        st.markdown(f"<h3 style='color:#E2E8F0; font-weight:700; margin:8px 0 16px; font-size:1.1rem; letter-spacing:-0.01em;'>📋 ניתוח ידיים ({len(hs)} ידיים)</h3>", unsafe_allow_html=True)
 
         # Section A — Position breakdown table
         pos_stats = {}
@@ -918,11 +951,11 @@ def _render_improvement():
             ))
 
             fig.update_layout(
-                paper_bgcolor="#0d1117", plot_bgcolor="#0d1117",
+                paper_bgcolor="#070B14", plot_bgcolor="#070B14",
                 height=240, margin=dict(l=0, r=0, t=10, b=0),
                 font=dict(color="#8b949e", size=11),
                 xaxis=dict(showgrid=False, zeroline=False, tickangle=-45, tickfont=dict(size=11)),
-                yaxis=dict(showgrid=True, gridcolor="#21262d", zeroline=False, tickfont=dict(size=11)),
+                yaxis=dict(showgrid=True, gridcolor="#1E2D45", zeroline=False, tickfont=dict(size=11)),
                 hoverlabel=dict(bgcolor="#161b22", bordercolor="#30363d", font=dict(color="#e6edf3", size=13)),
                 legend=dict(orientation="h", yanchor="bottom", y=1.0,
                             bgcolor="rgba(0,0,0,0)", font=dict(size=10)),
@@ -979,7 +1012,7 @@ def _render_improvement():
                     number={"suffix": "%" if "pct" in leak["key"] else "", "font": {"size": 20, "color": "#e6edf3"}},
                 ))
                 fig_g.update_layout(
-                    paper_bgcolor="#161b22", height=140,
+                    paper_bgcolor="#0F1623", height=140,
                     margin=dict(l=10, r=10, t=10, b=10),
                     font=dict(color="#8b949e"),
                 )
@@ -1008,11 +1041,11 @@ def _render_improvement():
             hovertemplate="<b>%{x}</b><br>דליפות: %{y}<extra></extra>",
         ))
         fig_lh.update_layout(
-            paper_bgcolor="#0d1117", plot_bgcolor="#0d1117",
+            paper_bgcolor="#070B14", plot_bgcolor="#070B14",
             height=220, margin=dict(l=0, r=0, t=10, b=0),
             font=dict(color="#8b949e", size=11),
             xaxis=dict(showgrid=False, zeroline=False, tickangle=-45, tickfont=dict(size=11)),
-            yaxis=dict(showgrid=True, gridcolor="#21262d", zeroline=False, tickfont=dict(size=11), dtick=1),
+            yaxis=dict(showgrid=True, gridcolor="#1E2D45", zeroline=False, tickfont=dict(size=11), dtick=1),
             hoverlabel=dict(bgcolor="#161b22", bordercolor="#30363d", font=dict(color="#e6edf3", size=13)),
             showlegend=False,
         )
@@ -1040,7 +1073,13 @@ def _render_improvement():
 # ═════════════════════════════════════════════════════════════════════════════
 
 with st.sidebar:
-    st.markdown("## ♠ פוקר")
+    st.markdown("""
+<div style='text-align:center; padding: 16px 0 8px;'>
+    <div style='font-size: 2.5rem;'>♠</div>
+    <div style='color:#E2E8F0; font-weight:800; font-size:1.1rem; letter-spacing:0.05em;'>POKER PRO</div>
+    <div style='color:#64748B; font-size:0.72rem;'>GG Poker · מעקב ביצועים</div>
+</div>
+""", unsafe_allow_html=True)
     st.divider()
     nav = st.radio(
         "ניווט",
@@ -1056,9 +1095,24 @@ with st.sidebar:
         st.rerun()
 
     st.divider()
-    st.caption(f"🃏 {n_total} טורנירים")
-    st.caption(f"💰 ROI: {roi:+.1f}%")
-    st.caption(f"🏆 ITM: {itm_pct:.1f}%")
+    roi_border = "#064E3B" if roi >= 0 else "#450A0A"
+    roi_color  = "#10B981" if roi >= 0 else "#EF4444"
+    st.markdown(f"""
+<div style='display:flex; flex-direction:column; gap:8px;'>
+    <div style='background:#0F1623; border:1px solid #1E2D45; border-radius:8px; padding:10px 12px;'>
+        <div style='color:#64748B; font-size:0.68rem; font-weight:600; text-transform:uppercase;'>טורנירים</div>
+        <div style='color:#E2E8F0; font-weight:700; font-size:1rem;'>{n_total}</div>
+    </div>
+    <div style='background:#0F1623; border:1px solid {roi_border}; border-radius:8px; padding:10px 12px;'>
+        <div style='color:#64748B; font-size:0.68rem; font-weight:600; text-transform:uppercase;'>ROI</div>
+        <div style='color:{roi_color}; font-weight:700; font-size:1rem;'>{roi:+.1f}%</div>
+    </div>
+    <div style='background:#0F1623; border:1px solid #1E2D45; border-radius:8px; padding:10px 12px;'>
+        <div style='color:#64748B; font-size:0.68rem; font-weight:600; text-transform:uppercase;'>ITM</div>
+        <div style='color:#F59E0B; font-weight:700; font-size:1rem;'>{itm_pct:.1f}%</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
