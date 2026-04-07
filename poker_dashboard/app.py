@@ -237,6 +237,10 @@ df = pd.DataFrame(rows) if rows else pd.DataFrame(
 )
 
 if not df.empty:
+    # ודא שכל העמודות קיימות גם אם חסרות מה-session_state
+    for col in ["buy_in", "rake", "bounties", "cash_out"]:
+        if col not in df.columns:
+            df[col] = 0.0
     df["date_dt"]      = pd.to_datetime(df["date"], errors="coerce")
     df["total_cost"]   = df["buy_in"].fillna(0) + df["rake"].fillna(0)
     df["total_return"] = df["bounties"].fillna(0) + df["cash_out"].fillna(0)
