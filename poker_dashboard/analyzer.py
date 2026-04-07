@@ -194,11 +194,16 @@ def analyze_hand(hand_text: str) -> HandResult | None:
                 elif "raises" in stripped: r.raises_post += 1
                 elif "calls" in stripped:  r.calls += 1
 
-    # ── Showdown ─────────────────────────────────────────────────────────────
-    r.went_to_sd = bool(sd) and ("Hero: shows" in sd or "Hero showed" in sd)
+    # ── Showdown ──────────────────────────────────────────────────────────────
+    # GG Poker: לפעמים "Hero: shows" מופיע בסקשן HOLE CARDS (all-in preflop)
+    hero_showed = (
+        "Hero: shows" in sd
+        or "Hero showed" in sd
+        or "Hero: shows" in hole   # all-in preflop run-out
+    )
+    r.went_to_sd = hero_showed
 
-    # Win detection: summary section
-    summary = sec.get("SUMMARY", "")
+    # Win detection
     r.won_hand = bool(RE_WIN_POT.search(hand_text))
     if r.went_to_sd:
         r.won_at_sd = r.won_hand

@@ -82,10 +82,15 @@ def _extract_buyin(header: str) -> tuple[float, float]:
 
 
 def _extract_title(header: str) -> str:
+    # פורמט: "Tournament #..., Sunday Hyper $5 Hold'em No Limit - Level..."
+    # נרצה לחלץ: "Sunday Hyper $5"
     m = RE_TITLE.search(header)
     if m:
-        return m.group(1).strip()
-    # fallback — טקסט בין הפסיק הראשון לאחר Tournament# ל-Level
+        title = m.group(1).strip()
+        # הסר Hold'em/No Limit שנשאר בסוף
+        title = re.sub(r"\s+(?:Hold'?em|No\s*Limit|NLH|PLO)\s*$", "", title, flags=re.IGNORECASE).strip()
+        return title
+    # fallback
     m2 = re.search(r"Tournament\s+#\d+,\s*(.+?)\s*[-–]\s*Level", header, re.IGNORECASE)
     if m2:
         return m2.group(1).strip()
