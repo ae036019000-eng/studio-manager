@@ -545,7 +545,8 @@ def _render_dashboard():
                     if net is not None:
                         color = "#3fb950" if net >= 0 else "#f85149"
                         sign  = "+" if net >= 0 else ""
-                        st.markdown(f"<span style='color:{color};font-weight:700'>{sign}${net:.2f}</span> &nbsp; ROI: {roi_t:+.1f}%", unsafe_allow_html=True)
+                        roi_str = f" &nbsp; ROI: {roi_t:+.1f}%" if roi_t is not None else ""
+                        st.markdown(f"<span style='color:{color};font-weight:700'>{sign}${net:.2f}</span>{roi_str}", unsafe_allow_html=True)
                     else:
                         st.caption("⏳ ממתין לתוצאה")
                 with c2:
